@@ -72,6 +72,6 @@ export const mockLogin = async (
 
 // Test account info for developers
 export const testAccount = {
-  email: "admin@qtifood.com",
+  email: "seller@qtifood.com",
   password: "123456",
 };

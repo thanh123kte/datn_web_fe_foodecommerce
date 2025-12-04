@@ -11,7 +11,7 @@ interface Product {
   price: number;
   inventory: number;
   sold: number;
-  status: "active" | "inactive" | "out_of_stock";
+  status: "AVAILABLE" | "UNAVAILABLE" | "out_of_stock";
   categoryName: string;
   images: string[];
 }

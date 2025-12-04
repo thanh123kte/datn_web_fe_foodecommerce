@@ -51,7 +51,7 @@ export default function GoogleLoginButton({
           ? getFirebaseErrorMessage(err)
           : "Đã có lỗi xảy ra khi đăng nhập với Google.";
       toast.error(errorMessage);
-      console.error("Google login error:", err);
+      // Google login error
     } finally {
       setIsLoading(false);
     }

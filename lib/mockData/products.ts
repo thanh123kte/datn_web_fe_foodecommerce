@@ -7,13 +7,12 @@ export interface Product {
   categoryId: string;
   categoryName: string;
   images: string[];
-  status: "active" | "inactive" | "out_of_stock";
+  status: "AVAILABLE" | "UNAVAILABLE" | "out_of_stock";
   inventory: number;
   sold: number;
   rating: number;
   reviewCount: number;
   tags: string[];
-  isFeature: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -202,10 +201,9 @@ export interface ProductFormData {
   originalPrice?: number;
   categoryId: string;
   images: string[];
-  status: "active" | "inactive" | "out_of_stock";
+  status: "AVAILABLE" | "UNAVAILABLE" | "out_of_stock";
   inventory: number;
   tags: string[];
-  isFeature: boolean;
 }
 
 // Mock API functions

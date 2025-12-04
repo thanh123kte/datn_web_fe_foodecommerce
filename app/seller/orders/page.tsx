@@ -26,8 +26,6 @@ import {
   OrderStats,
   OrderStatus,
   PaymentStatus,
-  getOrdersAPI,
-  updateOrderStatusAPI,
   getOrderStatusColor,
   getPaymentStatusColor,
   getOrderStatusText,
@@ -36,6 +34,9 @@ import {
 } from "@/lib/mockData/orders";
 import OrderFilters from "./components/OrderFilters";
 import OrderStatusModal from "./components/OrderStatusModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { orderService, OrderResponseDto } from "@/lib/services/orderService";
+import { buildAbsoluteUrl } from "@/lib/config/env";
 
 interface OrderFilters {
   search: string;
@@ -48,6 +49,9 @@ interface OrderFilters {
 }
 
 export default function OrdersPage() {
+  const { currentStore, userRole, refreshStore } = useAuth();
+  const storeId = currentStore?.id;
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,23 +70,152 @@ export default function OrdersPage() {
   });
 
   const loadOrders = async () => {
+    if (!storeId) {
+      setOrders([]);
+      setStats(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const filterParams = {
-        ...(filters.status !== "ALL" && { status: filters.status }),
-        ...(filters.paymentStatus !== "ALL" && {
-          paymentStatus: filters.paymentStatus,
-        }),
-        ...(filters.search && { search: filters.search }),
-        ...(filters.dateFrom && { dateFrom: filters.dateFrom }),
-        ...(filters.dateTo && { dateTo: filters.dateTo }),
-        sortBy: filters.sortBy,
-        order: filters.order,
+      const data: OrderResponseDto[] = await orderService.getByStore(storeId);
+      const resolveAvatar = (url?: string | null, name?: string | null) => {
+        // Only allow local/server-hosted images; fallback to generated avatar
+        const absolute =
+          url && !/^https?:\/\//i.test(url) ? buildAbsoluteUrl(url) : undefined;
+        if (absolute) return absolute;
+        const safeName = encodeURIComponent(name || "User");
+        return `https://ui-avatars.com/api/?name=${safeName}&background=E5E7EB&color=111827`;
       };
 
-      const data = await getOrdersAPI(filterParams);
-      setOrders(data.orders);
-      setStats(data.stats);
+      // Map backend DTO -> UI Order model with safe fallbacks
+      const mapped: Order[] = data.map((o) => ({
+        id: String(o.id),
+        customerId: o.customerId || "",
+        customer: {
+          id: o.customerId || "",
+          name: o.customerName || "Khách hàng",
+          email: "",
+          phone: o.customerPhone || "",
+          avatar: resolveAvatar(o.customerAvatar, o.customerName),
+        },
+        storeId: String(o.storeId || ""),
+        driverId: o.driverId ? String(o.driverId) : undefined,
+        driver: o.driverId
+          ? {
+              id: String(o.driverId),
+              name: o.driverName || "Tài xế",
+              phone: o.driverPhone || "",
+              vehicleType: "",
+              vehiclePlate: "",
+            }
+          : undefined,
+        shippingAddress: {
+          id: o.shippingAddressId ? String(o.shippingAddressId) : "",
+          receiver: o.customerName || "",
+          phone: o.customerPhone || "",
+          address: o.shippingAddress || "",
+        },
+        items: [],
+        totalAmount: Number(o.totalAmount ?? 0),
+        shippingFee: Number(o.shippingFee ?? 0),
+        adminVoucherId: o.adminVoucherId ? String(o.adminVoucherId) : undefined,
+        sellerVoucherId: o.sellerVoucherId
+          ? String(o.sellerVoucherId)
+          : undefined,
+        paymentMethod: o.paymentMethod || "COD",
+        paymentStatus: o.paymentStatus || "PENDING",
+        paidAt: o.paidAt || undefined,
+        orderStatus: o.orderStatus || "PENDING",
+        note: o.note || undefined,
+        cancelReason: o.cancelReason || undefined,
+        expectedDeliveryTime: o.expectedDeliveryTime || undefined,
+        ratingStatus: o.ratingStatus ?? false,
+        createdAt: o.createdAt || "",
+        updatedAt: o.updatedAt || "",
+      }));
+
+      // Client-side filters reused from mock implementation
+      const filtered = mapped.filter((order) => {
+        const matchesStatus =
+          filters.status === "ALL" || order.orderStatus === filters.status;
+        const matchesPayment =
+          filters.paymentStatus === "ALL" ||
+          order.paymentStatus === filters.paymentStatus;
+        const matchesSearch = filters.search
+          ? order.id.toLowerCase().includes(filters.search.toLowerCase())
+          : true;
+
+        const inDateFrom = filters.dateFrom
+          ? new Date(order.createdAt) >= new Date(filters.dateFrom)
+          : true;
+        const inDateTo = filters.dateTo
+          ? new Date(order.createdAt) <= new Date(filters.dateTo)
+          : true;
+
+        return (
+          matchesStatus &&
+          matchesPayment &&
+          matchesSearch &&
+          inDateFrom &&
+          inDateTo
+        );
+      });
+
+      // Sorting
+      const sorted = [...filtered].sort((a, b) => {
+        let aVal: number | string;
+        let bVal: number | string;
+        switch (filters.sortBy) {
+          case "totalAmount":
+            aVal = a.totalAmount;
+            bVal = b.totalAmount;
+            break;
+          case "customerName":
+            aVal = a.customer.name;
+            bVal = b.customer.name;
+            break;
+          case "createdAt":
+          default:
+            aVal = new Date(a.createdAt).getTime();
+            bVal = new Date(b.createdAt).getTime();
+        }
+        return filters.order === "asc" ? aVal - bVal : bVal - aVal;
+      });
+
+      // Compute stats from full mapped list
+      const statsData: OrderStats = {
+        totalOrders: mapped.length,
+        pendingOrders: mapped.filter((o) => o.orderStatus === "PENDING").length,
+        confirmedOrders: mapped.filter((o) => o.orderStatus === "CONFIRMED")
+          .length,
+        preparingOrders: mapped.filter((o) => o.orderStatus === "PREPARING")
+          .length,
+        shippingOrders: mapped.filter((o) => o.orderStatus === "SHIPPING")
+          .length,
+        deliveredOrders: mapped.filter((o) => o.orderStatus === "DELIVERED")
+          .length,
+        cancelledOrders: mapped.filter((o) => o.orderStatus === "CANCELLED")
+          .length,
+        totalRevenue: mapped
+          .filter((o) => o.orderStatus === "DELIVERED")
+          .reduce((sum, o) => sum + o.totalAmount, 0),
+        todayOrders: mapped.filter(
+          (o) =>
+            new Date(o.createdAt).toDateString() === new Date().toDateString()
+        ).length,
+        todayRevenue: mapped
+          .filter(
+            (o) =>
+              o.orderStatus === "DELIVERED" &&
+              new Date(o.createdAt).toDateString() === new Date().toDateString()
+          )
+          .reduce((sum, o) => sum + o.totalAmount, 0),
+      };
+
+      setOrders(sorted);
+      setStats(statsData);
     } catch (error) {
       console.error("Error loading orders:", error);
     } finally {
@@ -92,18 +225,29 @@ export default function OrdersPage() {
 
   useEffect(() => {
     loadOrders();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, storeId]);
+
+  useEffect(() => {
+    if (userRole === "SELLER" && !storeId) {
+      refreshStore();
+    }
+  }, [userRole, storeId, refreshStore]);
 
   const handleUpdateStatus = async (status: OrderStatus, note?: string) => {
     if (!selectedOrder) return;
 
     setUpdateLoading(true);
     try {
-      const updatedOrder = await updateOrderStatusAPI(
-        selectedOrder.id,
-        status,
-        note
-      );
+      // TODO: Implement API call to update order status
+      // For now, just update local state
+      const updatedOrder = {
+        ...selectedOrder,
+        orderStatus: status,
+        cancelReason:
+          status === "CANCELLED" ? note : selectedOrder.cancelReason,
+      };
+
       setOrders((prev) =>
         prev.map((order) =>
           order.id === updatedOrder.id ? updatedOrder : order
@@ -150,10 +294,10 @@ export default function OrdersPage() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Order Management
+            Quản Lý Đơn Hàng
           </h1>
           <p className="text-gray-600">
-            Manage and track all your restaurant orders
+            Quản lý và theo dõi tất cả đơn hàng của cửa hàng
           </p>
         </div>
 
@@ -163,9 +307,7 @@ export default function OrdersPage() {
             <Card className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    Total Orders
-                  </p>
+                  <p className="text-sm font-medium text-gray-600">Tổng Đơn</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {stats.totalOrders}
                   </p>
@@ -177,7 +319,7 @@ export default function OrdersPage() {
             <Card className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
+                  <p className="text-sm font-medium text-gray-600">Chờ Xử Lý</p>
                   <p className="text-2xl font-bold text-yellow-600">
                     {stats.pendingOrders}
                   </p>
@@ -189,7 +331,9 @@ export default function OrdersPage() {
             <Card className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Confirmed</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Đã Xác Nhận
+                  </p>
                   <p className="text-2xl font-bold text-blue-600">
                     {stats.confirmedOrders}
                   </p>
@@ -201,7 +345,9 @@ export default function OrdersPage() {
             <Card className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Preparing</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Đang Chuẩn Bị
+                  </p>
                   <p className="text-2xl font-bold text-orange-600">
                     {stats.preparingOrders}
                   </p>
@@ -213,7 +359,7 @@ export default function OrdersPage() {
             <Card className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Shipping</p>
+                  <p className="text-sm font-medium text-gray-600">Đang Giao</p>
                   <p className="text-2xl font-bold text-purple-600">
                     {stats.shippingOrders}
                   </p>
@@ -225,7 +371,7 @@ export default function OrdersPage() {
             <Card className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Delivered</p>
+                  <p className="text-sm font-medium text-gray-600">Đã Giao</p>
                   <p className="text-2xl font-bold text-green-600">
                     {stats.deliveredOrders}
                   </p>
@@ -237,7 +383,7 @@ export default function OrdersPage() {
             <Card className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Revenue</p>
+                  <p className="text-sm font-medium text-gray-600">Doanh Thu</p>
                   <p className="text-xl font-bold text-green-600">
                     {formatPrice(stats.totalRevenue).replace("₫", "")}k
                   </p>
@@ -261,21 +407,21 @@ export default function OrdersPage() {
           <Card className="p-8">
             <div className="flex items-center justify-center">
               <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-              <span className="ml-3 text-gray-600">Loading orders...</span>
+              <span className="ml-3 text-gray-600">Đang tải đơn hàng...</span>
             </div>
           </Card>
         ) : orders.length === 0 ? (
           <Card className="p-12 text-center">
             <ShoppingCart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No orders found
+              Không tìm thấy đơn hàng
             </h3>
             <p className="text-gray-600">
               {filters.search ||
               filters.status !== "ALL" ||
               filters.paymentStatus !== "ALL"
-                ? "Try adjusting your filters to see more orders"
-                : "Orders will appear here when customers place them"}
+                ? "Thử điều chỉnh bộ lọc để xem thêm đơn hàng"
+                : "Đơn hàng sẽ xuất hiện ở đây khi khách hàng đặt hàng"}
             </p>
           </Card>
         ) : (
@@ -295,7 +441,7 @@ export default function OrdersPage() {
                         <div>
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-lg font-semibold text-gray-900">
-                              Order #{order.id}
+                              Đơn hàng #{order.id}
                             </h3>
                             <Badge
                               className={getOrderStatusColor(order.orderStatus)}
@@ -328,7 +474,7 @@ export default function OrdersPage() {
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                         <div>
                           <h4 className="font-medium text-gray-900 mb-2">
-                            Customer
+                            Khách Hàng
                           </h4>
                           <div className="flex items-center gap-3">
                             {order.customer.avatar && (
@@ -352,55 +498,20 @@ export default function OrdersPage() {
 
                         <div>
                           <h4 className="font-medium text-gray-900 mb-2">
-                            Delivery Address
+                            Địa Chỉ Giao Hàng
                           </h4>
                           <p className="text-sm text-gray-600">
                             {order.shippingAddress.address}
                           </p>
                           {order.note && (
                             <p className="text-sm text-orange-600 mt-1">
-                              <strong>Note:</strong> {order.note}
+                              <strong>Ghi chú:</strong> {order.note}
                             </p>
                           )}
                         </div>
                       </div>
 
                       {/* Order Items */}
-                      <div className="mb-4">
-                        <h4 className="font-medium text-gray-900 mb-2">
-                          Items ({order.items.length})
-                        </h4>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                          {order.items.slice(0, 4).map((item) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg"
-                            >
-                              {item.productImage && (
-                                <img
-                                  src={item.productImage}
-                                  alt={item.productName}
-                                  className="w-10 h-10 rounded-lg object-cover"
-                                />
-                              )}
-                              <div className="flex-1">
-                                <p className="font-medium text-sm text-gray-900">
-                                  {item.productName}
-                                </p>
-                                <p className="text-xs text-gray-600">
-                                  {item.quantity}x {formatPrice(item.price)} ={" "}
-                                  {formatPrice(item.total)}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                          {order.items.length > 4 && (
-                            <div className="p-2 bg-gray-100 rounded-lg text-center text-sm text-gray-600">
-                              +{order.items.length - 4} more items
-                            </div>
-                          )}
-                        </div>
-                      </div>
                     </div>
 
                     {/* Right Side - Actions */}
@@ -408,7 +519,7 @@ export default function OrdersPage() {
                       <Link href={`/seller/orders/${order.id}`}>
                         <Button variant="outline" size="sm" className="w-full">
                           <Eye className="w-4 h-4 mr-2" />
-                          View Details
+                          Xem Chi Tiết
                         </Button>
                       </Link>
 
@@ -420,7 +531,7 @@ export default function OrdersPage() {
                             className="bg-orange-500 hover:bg-orange-600 w-full"
                           >
                             <ArrowRight className="w-4 h-4 mr-2" />
-                            Update Status
+                            Cập Nhật Trạng Thái
                           </Button>
                         )}
                     </div>

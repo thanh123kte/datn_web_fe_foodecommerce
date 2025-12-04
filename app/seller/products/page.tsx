@@ -7,6 +7,7 @@ import DeleteProductModal from "@/components/products/DeleteProductModal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Plus,
   Grid,
@@ -19,22 +20,31 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import {
-  Product,
   ProductFilters,
-  getProductsAPI,
+  Product as UiProduct,
+  ProductFormData,
   createProductAPI,
   updateProductAPI,
   deleteProductAPI,
-  ProductFormData,
 } from "@/lib/mockData/products";
 import ProductFormModal from "./components/ProductFormModal";
 import ProductFilterPanel from "./components/ProductFilterPanel";
+import {
+  productService,
+  ProductResponseDto,
+} from "@/lib/services/productService";
+import { productImageService } from "@/lib/services/productImageService";
+import { buildAbsoluteUrl } from "@/lib/config/env";
 
 type ViewMode = "grid" | "table";
+type Product = UiProduct;
 
 export default function ProductsPage() {
+  const { currentStore, userRole, refreshStore } = useAuth();
+  const storeId = currentStore?.id;
+
   // State
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<UiProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ProductFilters>({});
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -42,15 +52,101 @@ export default function ProductsPage() {
   // Modal states
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<UiProduct | null>(
+    null
+  );
   const [modalLoading, setModalLoading] = useState(false);
 
   // Load products
   const loadProducts = async () => {
+    if (!storeId) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await getProductsAPI(filters);
-      setProducts(data);
+      const data: ProductResponseDto[] = await productService.getByStore(
+        storeId
+      );
+
+      // Load images for all products in parallel
+      const productsWithImages = await Promise.all(
+        data.map(async (p) => {
+          try {
+            const images = await productImageService.getByProductId(p.id);
+            const primaryImage = images.find((img) => img.isPrimary);
+            // Prepend backend URL if imageUrl is a relative path
+            const fullImageUrl = primaryImage?.imageUrl
+              ? buildAbsoluteUrl(primaryImage.imageUrl)
+              : "";
+            return {
+              product: p,
+              imageUrl: fullImageUrl,
+            };
+          } catch (error) {
+            console.error(`Error loading images for product ${p.id}:`, error);
+            return {
+              product: p,
+              imageUrl: "",
+            };
+          }
+        })
+      );
+
+      // Map backend DTO to UI-friendly shape; fill missing fields with safe defaults
+      const mapped: UiProduct[] = productsWithImages.map(
+        ({ product: p, imageUrl }) => ({
+          id: String(p.id),
+          name: p.name,
+          description: p.description || "",
+          price: p.discountPrice
+            ? Number(p.discountPrice)
+            : Number(p.price ?? 0),
+          originalPrice: p.discountPrice ? Number(p.price) : undefined,
+          categoryId: String(p.storeCategoryId ?? p.categoryId ?? ""),
+          categoryName:
+            p.storeCategoryName || p.categoryName || "Chưa phân loại",
+          images: imageUrl ? [imageUrl] : [],
+          status:
+            p.status === "UNAVAILABLE"
+              ? "UNAVAILABLE"
+              : p.status === "OUT_OF_STOCK"
+              ? "out_of_stock"
+              : "AVAILABLE",
+          inventory: 0,
+          sold: 0,
+          rating: 0,
+          reviewCount: 0,
+          tags: [],
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        })
+      );
+
+      // Simple client filters (reuse existing UI filters)
+      const filtered = mapped.filter((product) => {
+        const matchesSearch = filters.search
+          ? product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+            product.description
+              .toLowerCase()
+              .includes(filters.search.toLowerCase())
+          : true;
+
+        const matchesCategory = filters.categoryId
+          ? product.categoryId === filters.categoryId
+          : true;
+
+        const matchesStatus =
+          filters.status && filters.status !== "all"
+            ? product.status === filters.status
+            : true;
+
+        return matchesSearch && matchesCategory && matchesStatus;
+      });
+
+      setProducts(filtered);
     } catch (error) {
       console.error("Error loading products:", error);
     } finally {
@@ -61,33 +157,84 @@ export default function ProductsPage() {
   // Effects
   useEffect(() => {
     loadProducts();
-  }, [filters]);
+  }, [filters, storeId]);
+
+  useEffect(() => {
+    if (userRole === "SELLER" && !storeId) {
+      refreshStore();
+    }
+  }, [userRole, storeId, refreshStore]);
 
   // Handlers
-  const handleCreateProduct = async (data: ProductFormData) => {
+  const handleCreateProduct = async (data: ProductFormData, files: File[]) => {
+    if (!storeId) {
+      console.error("Store ID not available");
+      return;
+    }
+
     setModalLoading(true);
     try {
-      await createProductAPI(data);
+      const createData = {
+        storeId: storeId,
+        storeCategoryId: Number(data.categoryId),
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        discountPrice: data.originalPrice || undefined,
+        status: data.status as "AVAILABLE" | "UNAVAILABLE",
+      };
+
+      // Tạo sản phẩm
+      const createdProduct = await productService.create(createData);
+
+      // Upload ảnh nếu có
+      if (files.length > 0) {
+        const uploadPromises = files.map((file) =>
+          productImageService.upload(createdProduct.id, file)
+        );
+        await Promise.all(uploadPromises);
+      }
+
       await loadProducts();
       setShowFormModal(false);
     } catch (error) {
-      console.error("Error creating product:", error);
+      console.error("Lỗi khi tạo sản phẩm:", error);
+      alert("Không thể tạo sản phẩm. Vui lòng thử lại.");
     } finally {
       setModalLoading(false);
     }
   };
 
-  const handleUpdateProduct = async (data: ProductFormData) => {
+  const handleUpdateProduct = async (data: ProductFormData, files: File[]) => {
     if (!selectedProduct) return;
 
     setModalLoading(true);
     try {
-      await updateProductAPI(selectedProduct.id, data);
+      const updateData = {
+        storeCategoryId: Number(data.categoryId),
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        discountPrice: data.originalPrice || undefined,
+        status: data.status as "AVAILABLE" | "UNAVAILABLE",
+      };
+
+      await productService.update(Number(selectedProduct.id), updateData);
+
+      // Upload ảnh mới nếu có
+      if (files.length > 0) {
+        const uploadPromises = files.map((file) =>
+          productImageService.upload(Number(selectedProduct.id), file)
+        );
+        await Promise.all(uploadPromises);
+      }
+
       await loadProducts();
       setShowFormModal(false);
       setSelectedProduct(null);
     } catch (error) {
-      console.error("Error updating product:", error);
+      console.error("Lỗi khi cập nhật sản phẩm:", error);
+      alert("Không thể cập nhật sản phẩm. Vui lòng thử lại.");
     } finally {
       setModalLoading(false);
     }
@@ -98,12 +245,13 @@ export default function ProductsPage() {
 
     setModalLoading(true);
     try {
-      await deleteProductAPI(selectedProduct.id);
+      await productService.delete(Number(selectedProduct.id));
       await loadProducts();
       setShowDeleteModal(false);
       setSelectedProduct(null);
     } catch (error) {
-      console.error("Error deleting product:", error);
+      console.error("Lỗi khi xóa sản phẩm:", error);
+      alert("Không thể xóa sản phẩm. Vui lòng thử lại.");
     } finally {
       setModalLoading(false);
     }
@@ -135,23 +283,11 @@ export default function ProductsPage() {
   // Calculate stats
   const stats = {
     total: products.length,
-    active: products.filter((p) => p.status === "active").length,
-    inactive: products.filter((p) => p.status === "inactive").length,
+    active: products.filter((p) => p.status === "AVAILABLE").length,
+    inactive: products.filter((p) => p.status === "UNAVAILABLE").length,
     outOfStock: products.filter((p) => p.status === "out_of_stock").length,
-    featured: products.filter((p) => p.isFeature).length,
     totalSold: products.reduce((sum, p) => sum + p.sold, 0),
-    totalInventory: products.reduce((sum, p) => sum + p.inventory, 0),
-    avgRating:
-      products.length > 0
-        ? (
-            products.reduce((sum, p) => sum + p.rating, 0) / products.length
-          ).toFixed(1)
-        : "0.0",
   };
-
-  const lowStockProducts = products.filter(
-    (p) => p.inventory <= 5 && p.status === "active"
-  );
 
   return (
     <MainLayout userRole="seller">
@@ -160,16 +296,18 @@ export default function ProductsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Product Management
+              Quản Lý Sản Phẩm
             </h1>
-            <p className="text-gray-600">Manage your store's product catalog</p>
+            <p className="text-gray-600">
+              Quản lý danh mục sản phẩm của cửa hàng
+            </p>
           </div>
           <Button
             onClick={() => setShowFormModal(true)}
             className="bg-orange-500 hover:bg-orange-600"
           >
             <Plus className="w-5 h-5 mr-2" />
-            Add Product
+            Thêm Sản Phẩm
           </Button>
         </div>
 
@@ -179,7 +317,7 @@ export default function ProductsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  Total Products
+                  Tổng Sản Phẩm
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {stats.total}
@@ -195,13 +333,13 @@ export default function ProductsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  Active Products
+                  Sản Phẩm Hoạt Động
                 </p>
                 <p className="text-2xl font-bold text-green-600">
                   {stats.active}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {stats.inactive} inactive, {stats.outOfStock} out of stock
+                  {stats.inactive} ngừng hoạt động, {stats.outOfStock} hết hàng
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -213,61 +351,20 @@ export default function ProductsPage() {
           <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Sales</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Tổng Bán Hàng
+                </p>
                 <p className="text-2xl font-bold text-orange-600">
                   {stats.totalSold}
                 </p>
-                <p className="text-xs text-gray-500">Items sold</p>
+                <p className="text-xs text-gray-500">Sản phẩm đã bán</p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-orange-600" />
               </div>
             </div>
           </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avg Rating</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {stats.avgRating}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {stats.featured} featured products
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Star className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-          </Card>
         </div>
-
-        {/* Low Stock Alert */}
-        {lowStockProducts.length > 0 && (
-          <Card className="p-4 bg-yellow-50 border-yellow-200">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 text-yellow-600" />
-              <div>
-                <h3 className="font-semibold text-yellow-800">
-                  Low Stock Alert
-                </h3>
-                <p className="text-sm text-yellow-700">
-                  {lowStockProducts.length} products have 5 or fewer items in
-                  stock
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setFilters({ ...filters, maxPrice: 5 })} // This is a workaround to show low stock
-                className="ml-auto border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-              >
-                View Products
-              </Button>
-            </div>
-          </Card>
-        )}
 
         {/* Filters */}
         <ProductFilterPanel
@@ -283,13 +380,13 @@ export default function ProductsPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-gray-700">
-                Showing {products.length} products
+                Hiển thị {products.length} sản phẩm
               </span>
               {Object.values(filters).some(
                 (v) => v !== undefined && v !== "" && v !== "all"
               ) && (
                 <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                  Filtered
+                  Đã Lọc
                 </Badge>
               )}
             </div>
@@ -325,21 +422,21 @@ export default function ProductsPage() {
           <Card className="p-12">
             <div className="flex items-center justify-center">
               <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-              <span className="ml-3 text-gray-600">Loading products...</span>
+              <span className="ml-3 text-gray-600">Đang tải sản phẩm...</span>
             </div>
           </Card>
         ) : products.length === 0 ? (
           <Card className="p-12 text-center">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No products found
+              Không tìm thấy sản phẩm
             </h3>
             <p className="text-gray-600 mb-6">
               {Object.values(filters).some(
                 (v) => v !== undefined && v !== "" && v !== "all"
               )
-                ? "Try adjusting your filters or search terms"
-                : "Create your first product to start selling"}
+                ? "Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm"
+                : "Tạo sản phẩm đầu tiên để bắt đầu bán hàng"}
             </p>
             {!Object.values(filters).some(
               (v) => v !== undefined && v !== "" && v !== "all"
@@ -349,7 +446,7 @@ export default function ProductsPage() {
                 className="bg-orange-500 hover:bg-orange-600"
               >
                 <Plus className="w-5 h-5 mr-2" />
-                Add First Product
+                Thêm Sản Phẩm Đầu Tiên
               </Button>
             )}
           </Card>
@@ -371,7 +468,6 @@ export default function ProductsPage() {
                 rating={product.rating}
                 reviewCount={product.reviewCount}
                 tags={product.tags}
-                isFeature={product.isFeature}
                 categoryName={product.categoryName}
                 onView={handleViewProduct}
                 onEdit={() => openEditModal(product)}
@@ -387,28 +483,22 @@ export default function ProductsPage() {
                 <thead className="border-b border-gray-200">
                   <tr>
                     <th className="text-left py-4 px-6 font-medium text-gray-700">
-                      Product
+                      Sản Phẩm
                     </th>
                     <th className="text-left py-4 px-6 font-medium text-gray-700">
-                      Category
+                      Danh Mục
                     </th>
                     <th className="text-left py-4 px-6 font-medium text-gray-700">
-                      Price
+                      Giá
                     </th>
                     <th className="text-left py-4 px-6 font-medium text-gray-700">
-                      Stock
+                      Đã Bán
                     </th>
                     <th className="text-left py-4 px-6 font-medium text-gray-700">
-                      Sales
-                    </th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">
-                      Rating
-                    </th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">
-                      Status
+                      Trạng Thái
                     </th>
                     <th className="text-right py-4 px-6 font-medium text-gray-700">
-                      Actions
+                      Hành Động
                     </th>
                   </tr>
                 </thead>
@@ -420,16 +510,31 @@ export default function ProductsPage() {
                     >
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-12 h-12 object-cover rounded-lg"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src =
-                                "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDlWN0MxOSA1IDIxIDMgMTkgM0g1QzMgMyAzIDUgNSA1SDdWOUg5VjdIMTVWOUgxN1Y3SDE5VjlIMjFaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=";
-                            }}
-                          />
+                          {product.images && product.images.length > 0 ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="w-12 h-12 object-cover rounded-lg"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = "none";
+                                const placeholder =
+                                  document.createElement("div");
+                                placeholder.className =
+                                  "w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center";
+                                placeholder.innerHTML =
+                                  '<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+                                target.parentElement?.insertBefore(
+                                  placeholder,
+                                  target
+                                );
+                              }}
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                              <Package className="w-6 h-6 text-gray-400" />
+                            </div>
+                          )}
                           <div>
                             <h3
                               className="font-medium text-gray-900 truncate max-w-xs"
@@ -437,11 +542,6 @@ export default function ProductsPage() {
                             >
                               {product.name}
                             </h3>
-                            {product.isFeature && (
-                              <Badge className="bg-orange-100 text-orange-800 text-xs mt-1">
-                                Featured
-                              </Badge>
-                            )}
                           </div>
                         </div>
                       </td>
@@ -467,44 +567,24 @@ export default function ProductsPage() {
                             )}
                         </div>
                       </td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`font-medium ${
-                            product.inventory <= 5
-                              ? "text-red-600"
-                              : "text-gray-900"
-                          }`}
-                        >
-                          {product.inventory}
-                        </span>
-                      </td>
                       <td className="py-4 px-6 text-gray-900 font-medium">
                         {product.sold}
                       </td>
                       <td className="py-4 px-6">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500" />
-                          <span className="font-medium">{product.rating}</span>
-                          <span className="text-gray-500 text-sm">
-                            ({product.reviewCount})
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
                         <Badge
                           className={
-                            product.status === "active"
+                            product.status === "AVAILABLE"
                               ? "bg-green-100 text-green-800"
-                              : product.status === "inactive"
+                              : product.status === "UNAVAILABLE"
                               ? "bg-gray-100 text-gray-800"
                               : "bg-red-100 text-red-800"
                           }
                         >
-                          {product.status === "active"
-                            ? "Active"
-                            : product.status === "inactive"
-                            ? "Inactive"
-                            : "Out of Stock"}
+                          {product.status === "AVAILABLE"
+                            ? "Hoạt Động"
+                            : product.status === "UNAVAILABLE"
+                            ? "Tạm Ngưng"
+                            : "Hết Hàng"}
                         </Badge>
                       </td>
                       <td className="py-4 px-6">
@@ -550,7 +630,7 @@ export default function ProductsPage() {
           setSelectedProduct(null);
         }}
         onSubmit={selectedProduct ? handleUpdateProduct : handleCreateProduct}
-        product={selectedProduct}
+        product={selectedProduct || undefined}
         isLoading={modalLoading}
       />
 

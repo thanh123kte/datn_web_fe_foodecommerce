@@ -62,6 +62,7 @@ export interface Order {
   items: OrderItem[];
   totalAmount: number;
   shippingFee: number;
+  discountAmount?: number;
   adminVoucherId?: string;
   sellerVoucherId?: string;
   paymentMethod: PaymentMethod;

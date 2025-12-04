@@ -16,7 +16,11 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { ProductFilters } from "@/lib/mockData/products";
-import { mockCategories } from "@/lib/mockData/categories";
+import {
+  storeCategoryService,
+  StoreCategory,
+} from "@/lib/services/storeCategoryService";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProductFilterPanelProps {
   filters: ProductFilters;
@@ -33,12 +37,35 @@ export default function ProductFilterPanel({
   totalProducts,
   isLoading = false,
 }: ProductFilterPanelProps) {
+  const { currentStore } = useAuth();
+  const storeId = currentStore?.id;
   const [localFilters, setLocalFilters] = useState<ProductFilters>(filters);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [categories, setCategories] = useState<StoreCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
+
+  useEffect(() => {
+    if (storeId) {
+      loadCategories();
+    }
+  }, [storeId]);
+
+  const loadCategories = async () => {
+    if (!storeId) return;
+    setLoadingCategories(true);
+    try {
+      const data = await storeCategoryService.getByStoreId(storeId);
+      setCategories(data);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const handleApplyFilters = () => {
     onFiltersChange(localFilters);
@@ -97,7 +124,7 @@ export default function ProductFilterPanel({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search products..."
+                placeholder="Tìm kiếm sản phẩm..."
                 value={localFilters.search || ""}
                 onChange={(e) =>
                   setLocalFilters((prev) => ({
@@ -105,6 +132,11 @@ export default function ProductFilterPanel({
                     search: e.target.value,
                   }))
                 }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleApplyFilters();
+                  }
+                }}
                 className="pl-10"
                 disabled={isLoading}
               />
@@ -124,8 +156,8 @@ export default function ProductFilterPanel({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               disabled={isLoading}
             >
-              <option value="">All Categories</option>
-              {mockCategories.map((category) => (
+              <option value="">Tất cả danh mục</option>
+              {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
@@ -146,10 +178,9 @@ export default function ProductFilterPanel({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               disabled={isLoading}
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="out_of_stock">Out of Stock</option>
+              <option value="all">Tất cả trạng thái</option>
+              <option value="AVAILABLE">Hoạt động</option>
+              <option value="UNAVAILABLE">Tạm ngưng</option>
             </select>
           </div>
 
@@ -269,58 +300,6 @@ export default function ProductFilterPanel({
                     <option value="asc">Ascending</option>
                   </select>
                 </div>
-              </div>
-            </div>
-
-            {/* Feature Filter */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                <Star className="w-4 h-4 inline mr-1" />
-                Product Type
-              </Label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="isFeature"
-                    checked={localFilters.isFeature === undefined}
-                    onChange={() =>
-                      setLocalFilters((prev) => ({
-                        ...prev,
-                        isFeature: undefined,
-                      }))
-                    }
-                    className="w-4 h-4 text-orange-500"
-                    disabled={isLoading}
-                  />
-                  <span className="text-sm text-gray-700">All Products</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="isFeature"
-                    checked={localFilters.isFeature === true}
-                    onChange={() =>
-                      setLocalFilters((prev) => ({ ...prev, isFeature: true }))
-                    }
-                    className="w-4 h-4 text-orange-500"
-                    disabled={isLoading}
-                  />
-                  <span className="text-sm text-gray-700">Featured Only</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="isFeature"
-                    checked={localFilters.isFeature === false}
-                    onChange={() =>
-                      setLocalFilters((prev) => ({ ...prev, isFeature: false }))
-                    }
-                    className="w-4 h-4 text-orange-500"
-                    disabled={isLoading}
-                  />
-                  <span className="text-sm text-gray-700">Regular Only</span>
-                </label>
               </div>
             </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   Package,
   TrendingUp,
 } from "lucide-react";
+import { API_BASE_URL, ASSET_BASE_URL, buildAbsoluteUrl } from "@/lib/config/env";
 
 interface ProductCardProps {
   id: string;
@@ -22,13 +23,12 @@ interface ProductCardProps {
   price: number;
   originalPrice?: number;
   image: string;
-  status: "active" | "inactive" | "out_of_stock";
+  status: "AVAILABLE" | "UNAVAILABLE" | "out_of_stock";
   inventory: number;
   sold: number;
   rating: number;
   reviewCount: number;
   tags: string[];
-  isFeature: boolean;
   categoryName: string;
   onView?: (id: string) => void;
   onEdit?: (id: string) => void;
@@ -37,11 +37,11 @@ interface ProductCardProps {
 }
 
 const statusConfig = {
-  active: {
+  AVAILABLE: {
     label: "Active",
     className: "bg-green-100 text-green-800",
   },
-  inactive: {
+  UNAVAILABLE: {
     label: "Inactive",
     className: "bg-gray-100 text-gray-800",
   },
@@ -73,6 +73,25 @@ export default function ProductCard({
 }: ProductCardProps) {
   const [imageError, setImageError] = useState(false);
 
+  // Build a safe image URL: support absolute, API-relative, or uploaded paths
+  const resolvedImage = useMemo(() => {
+    if (!image) return "";
+
+    // If already absolute (http/https/data), keep as is
+    if (/^https?:\/\//i.test(image) || image.startsWith("data:")) {
+      return image;
+    }
+
+    // If points to uploads/products/... convert to FileController route
+    if (image.includes("/uploads/")) {
+      const fileName = image.split("/").pop() || image;
+      return buildAbsoluteUrl(`/api/files/products/${fileName}`, API_BASE_URL);
+    }
+
+    // Otherwise treat as API-relative path
+    return buildAbsoluteUrl(image, ASSET_BASE_URL);
+  }, [image]);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -88,10 +107,10 @@ export default function ProductCard({
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
       {/* Image Section */}
-      <div className="relative aspect-video bg-gray-100">
-        {!imageError ? (
+      <div className="relative bg-gray-100 w-full h-56">
+        {!imageError && resolvedImage ? (
           <img
-            src={image}
+            src={resolvedImage}
             alt={name}
             className="w-full h-full object-cover"
             onError={() => setImageError(true)}

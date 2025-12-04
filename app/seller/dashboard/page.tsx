@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import MainLayout from "@/components/layout/MainLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useBackendAuth } from "@/hooks/useBackendAuth";
 import {
   Package,
   ShoppingCart,
@@ -16,9 +17,14 @@ import {
 } from "lucide-react";
 
 export default function SellerDashboard() {
-  const { user, loading } = useAuthGuard("/seller/login");
+  const { user: firebaseUser, loading: firebaseLoading } =
+    useAuthGuard("/seller/login");
+  const { user: backendUser, loading: backendLoading } = useBackendAuth();
   const { signOut } = useAuth();
   const router = useRouter();
+
+  const loading = firebaseLoading || backendLoading;
+  const user = backendUser || firebaseUser;
 
   const handleLogout = async () => {
     try {
@@ -53,20 +59,26 @@ export default function SellerDashboard() {
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
                 <span className="text-orange-500 text-2xl font-bold">
-                  {user.displayName
-                    ? user.displayName.charAt(0)
-                    : user.email?.charAt(0) || "U"}
+                  {backendUser
+                    ? backendUser.fullName.charAt(0)
+                    : firebaseUser?.displayName?.charAt(0) ||
+                      firebaseUser?.email?.charAt(0) ||
+                      "U"}
                 </span>
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  Chào mừng trở lại, {user.displayName || "Seller"}!
+                  Chào mừng trở lại,{" "}
+                  {backendUser
+                    ? backendUser.fullName
+                    : firebaseUser?.displayName || "Seller"}
+                  !
                 </h2>
                 <p className="text-gray-600">Cửa hàng của bạn</p>
                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                   <span>✉️ {user.email}</span>
                   <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-                    Hoạt động
+                    {backendUser ? backendUser.role : "Seller"}
                   </span>
                 </div>
               </div>

@@ -32,40 +32,40 @@ interface OrderStatusModalProps {
 const ORDER_STATUS_CONFIG = [
   {
     status: "CONFIRMED" as OrderStatus,
-    label: "Confirm Order",
-    description: "Accept the order and start preparation",
+    label: "Xác Nhận Đơn Hàng",
+    description: "Chấp nhận đơn hàng và bắt đầu chuẩn bị",
     icon: CheckCircle,
     color: "text-blue-600",
     allowedFrom: ["PENDING"],
   },
   {
     status: "PREPARING" as OrderStatus,
-    label: "Start Preparing",
-    description: "Begin cooking/preparing the order",
+    label: "Bắt Đầu Chuẩn Bị",
+    description: "Bắt đầu nấu/chuẩn bị đơn hàng",
     icon: Package,
     color: "text-orange-600",
     allowedFrom: ["CONFIRMED"],
   },
   {
     status: "SHIPPING" as OrderStatus,
-    label: "Ready for Delivery",
-    description: "Order is ready and handed to driver",
+    label: "Sẵn Sàng Giao Hàng",
+    description: "Đơn hàng đã sẵn sàng và giao cho tài xế",
     icon: Truck,
     color: "text-purple-600",
     allowedFrom: ["PREPARING"],
   },
   {
     status: "DELIVERED" as OrderStatus,
-    label: "Mark as Delivered",
-    description: "Order has been delivered successfully",
+    label: "Đánh Dấu Đã Giao",
+    description: "Đơn hàng đã được giao thành công",
     icon: MapPin,
     color: "text-green-600",
     allowedFrom: ["SHIPPING"],
   },
   {
     status: "CANCELLED" as OrderStatus,
-    label: "Cancel Order",
-    description: "Cancel this order (reason required)",
+    label: "Hủy Đơn Hàng",
+    description: "Hủy đơn hàng này (yêu cầu lý do)",
     icon: XCircle,
     color: "text-red-600",
     allowedFrom: ["PENDING", "CONFIRMED", "PREPARING"],
@@ -96,7 +96,7 @@ export default function OrderStatusModal({
 
     const config = ORDER_STATUS_CONFIG.find((c) => c.status === selectedStatus);
     if (config?.requiresReason && !note.trim()) {
-      alert("Please provide a reason for cancellation");
+      alert("Vui lòng cung cấp lý do hủy đơn");
       return;
     }
 
@@ -121,10 +121,10 @@ export default function OrderStatusModal({
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                Update Order Status
+                Cập Nhật Trạng Thái Đơn Hàng
               </h2>
               <p className="text-gray-600 mt-1">
-                Order #{order.id} - Current status:
+                Đơn hàng #{order.id} - Trạng thái hiện tại:
                 <Badge
                   className={`ml-2 ${getOrderStatusColor(order.orderStatus)}`}
                 >
@@ -146,19 +146,19 @@ export default function OrderStatusModal({
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium">Customer:</span>
+                <span className="font-medium">Khách hàng:</span>
                 <p className="text-gray-600">{order.customer.name}</p>
               </div>
               <div>
-                <span className="font-medium">Phone:</span>
+                <span className="font-medium">Số điện thoại:</span>
                 <p className="text-gray-600">{order.customer.phone}</p>
               </div>
               <div>
-                <span className="font-medium">Payment:</span>
+                <span className="font-medium">Thanh toán:</span>
                 <p className="text-gray-600">{order.paymentMethod}</p>
               </div>
               <div>
-                <span className="font-medium">Total:</span>
+                <span className="font-medium">Tổng tiền:</span>
                 <p className="text-gray-600 font-semibold">
                   {new Intl.NumberFormat("vi-VN", {
                     style: "currency",
@@ -171,12 +171,14 @@ export default function OrderStatusModal({
 
           {/* Status Options */}
           <div className="space-y-4 mb-6">
-            <h3 className="font-semibold text-gray-900">Select New Status:</h3>
+            <h3 className="font-semibold text-gray-900">
+              Chọn Trạng Thái Mới:
+            </h3>
 
             {availableStatuses.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p>No status updates available for current order state</p>
+                <p>Không có trạng thái nào để cập nhật cho đơn hàng này</p>
               </div>
             ) : (
               <div className="grid gap-3">
@@ -224,8 +226,8 @@ export default function OrderStatusModal({
               <FormField
                 label={
                   selectedStatus === "CANCELLED"
-                    ? "Cancellation Reason"
-                    : "Note (Optional)"
+                    ? "Lý Do Hủy"
+                    : "Ghi Chú (Tùy chọn)"
                 }
                 required={selectedStatus === "CANCELLED"}
               >
@@ -234,8 +236,8 @@ export default function OrderStatusModal({
                   onChange={(e) => setNote(e.target.value)}
                   placeholder={
                     selectedStatus === "CANCELLED"
-                      ? "Please explain why this order is being cancelled..."
-                      : "Add any additional notes..."
+                      ? "Vui lòng giải thích lý do hủy đơn hàng..."
+                      : "Thêm ghi chú bổ sung..."
                   }
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -252,7 +254,7 @@ export default function OrderStatusModal({
               onClick={handleClose}
               disabled={isLoading}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               onClick={handleConfirm}
@@ -262,10 +264,10 @@ export default function OrderStatusModal({
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Updating...
+                  Đang cập nhật...
                 </div>
               ) : (
-                "Update Status"
+                "Cập Nhật"
               )}
             </Button>
           </div>

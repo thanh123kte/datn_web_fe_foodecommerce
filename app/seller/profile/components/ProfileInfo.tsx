@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { User, Store } from "@/lib/mockData/profile";
+import { buildAbsoluteUrl } from "@/lib/config/env";
 import {
   Camera,
   User as UserIcon,
@@ -14,11 +15,38 @@ import {
   Clock,
 } from "lucide-react";
 
+const resolveMediaUrl = (
+  url?: string | null,
+  fallback: string = "/images/default-avatar.png"
+) => {
+  if (!url) return fallback;
+
+  // If absolute URL (including ui-avatars.com), keep as is
+  if (/^https?:\/\//i.test(url)) return url;
+
+  // Normalize relative paths to /uploads/...
+  let normalized = url;
+  if (url.startsWith("uploads/")) {
+    normalized = `/${url}`;
+  } else if (url.startsWith("/uploads/")) {
+    normalized = url;
+  } else if (url.startsWith("users/")) {
+    normalized = `/uploads/${url}`;
+  } else if (url.startsWith("/users/")) {
+    normalized = `/uploads${url}`;
+  } else {
+    // Default: assume it needs /uploads/ prefix
+    normalized = url.startsWith("/") ? `/uploads${url}` : `/uploads/${url}`;
+  }
+
+  return buildAbsoluteUrl(normalized) || fallback;
+};
+
 // Component interfaces
 interface PersonalInfoProps {
   user: User;
-  onUpdate: (userData: Partial<User>) => void;
-  onUploadAvatar: (file: File) => void;
+  onUpdate: (userData: Partial<User>) => Promise<void>;
+  onUploadAvatar: (file: File) => Promise<void>;
   loading?: boolean;
 }
 
@@ -49,10 +77,29 @@ export function PersonalInfo({
     phone: user.phone || "",
     email: user.email || "",
   });
+  const [previewAvatar, setPreviewAvatar] = useState<string | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(
+    null
+  );
 
-  const handleSave = () => {
-    onUpdate(formData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      // Save user info first
+      await onUpdate(formData);
+
+      // Then upload avatar if changed
+      if (selectedAvatarFile) {
+        await onUploadAvatar(selectedAvatarFile);
+      }
+
+      // Clear preview states
+      setPreviewAvatar(null);
+      setSelectedAvatarFile(null);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      // Keep editing mode on error
+    }
   };
 
   const handleCancel = () => {
@@ -61,13 +108,19 @@ export function PersonalInfo({
       phone: user.phone || "",
       email: user.email || "",
     });
+    // Clear preview states
+    setPreviewAvatar(null);
+    setSelectedAvatarFile(null);
     setIsEditing(false);
   };
 
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      onUploadAvatar(file);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setPreviewAvatar(previewUrl);
+      setSelectedAvatarFile(file);
     }
   };
 
@@ -108,15 +161,21 @@ export function PersonalInfo({
         {/* Avatar section */}
         <div className="flex flex-col items-center">
           <div className="relative">
-            <Image
-              src={user.avatar || "/images/default-avatar.png"}
-              alt="Avatar"
-              width={120}
-              height={120}
-              className="rounded-full object-cover border-4 border-gray-200"
-            />
+            <div className="w-[120px] h-[120px] rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100">
+              <Image
+                src={
+                  previewAvatar ||
+                  resolveMediaUrl(user.avatar_url, "/images/default-avatar.png")
+                }
+                alt="Avatar"
+                width={120}
+                height={120}
+                className="w-full h-full object-cover"
+                unoptimized
+              />
+            </div>
             {isEditing && (
-              <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
+              <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors shadow-lg">
                 <Camera className="w-4 h-4" />
                 <input
                   type="file"
@@ -129,7 +188,11 @@ export function PersonalInfo({
             )}
           </div>
           <p className="text-sm text-gray-500 mt-2 text-center">
-            {isEditing ? "Click to change photo" : "Profile Photo"}
+            {isEditing
+              ? selectedAvatarFile
+                ? "Photo selected - click Save"
+                : "Click to change photo"
+              : "Profile Photo"}
           </p>
         </div>
 
@@ -203,7 +266,7 @@ export function StoreInfo({
 }: StoreInfoProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    store_name: store.store_name || "",
+    name: store.name || "",
     description: store.description || "",
     phone: store.phone || "",
     address: store.address || "",
@@ -216,7 +279,7 @@ export function StoreInfo({
 
   const handleCancel = () => {
     setFormData({
-      store_name: store.store_name || "",
+      name: store.name || "",
       description: store.description || "",
       phone: store.phone || "",
       address: store.address || "",
@@ -271,10 +334,10 @@ export function StoreInfo({
           </div>
           <span
             className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-              store.status
+              store.store_status
             )}`}
           >
-            {getStatusText(store.status)}
+            {getStatusText(store.store_status)}
           </span>
         </div>
         {!isEditing ? (
@@ -308,7 +371,10 @@ export function StoreInfo({
         <div className="flex flex-col items-center">
           <div className="relative">
             <Image
-              src={store.image || "/images/default-store.png"}
+              src={resolveMediaUrl(
+                store.image_url,
+                "/images/default-store.png"
+              )}
               alt="Store"
               width={120}
               height={120}
@@ -328,7 +394,7 @@ export function StoreInfo({
             )}
           </div>
           <p className="text-sm text-gray-500 mt-2 text-center">
-            {isEditing ? "Click to change photo" : "Store Photo"}
+            {isEditing ? "Click to change store photo" : "Store Photo"}
           </p>
         </div>
 
@@ -339,17 +405,15 @@ export function StoreInfo({
             {isEditing ? (
               <Input
                 id="storeName"
-                value={formData.store_name}
+                value={formData.name}
                 onChange={(e) =>
-                  setFormData({ ...formData, store_name: e.target.value })
+                  setFormData({ ...formData, name: e.target.value })
                 }
                 disabled={loading}
                 className="mt-1"
               />
             ) : (
-              <p className="mt-1 p-2 bg-gray-50 rounded border">
-                {store.store_name}
-              </p>
+              <p className="mt-1 p-2 bg-gray-50 rounded border">{store.name}</p>
             )}
           </div>
 

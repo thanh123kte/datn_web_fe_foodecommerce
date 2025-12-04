@@ -11,6 +11,7 @@ import {
   UserCredential,
 } from "firebase/auth";
 import { auth } from "./firebase";
+import { authApiService } from "./services/authApiService";
 
 export interface SignUpData {
   email: string;
@@ -38,16 +39,25 @@ class AuthService {
   async signInWithGoogle(): Promise<UserCredential> {
     try {
       const result = await signInWithPopup(auth, this.googleProvider);
+      const user = result.user;
 
-      // Get ID token and send to API
-      const idToken = await result.user.getIdToken();
-      await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ idToken }),
-      });
+      if (!user) {
+        throw new Error("Không thể lấy thông tin user từ Firebase");
+      }
+
+      // Lấy access token từ Google credential
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const accessToken = credential?.accessToken;
+
+      if (!accessToken) {
+        throw new Error("Không thể lấy Google access token");
+      }
+
+      // Gửi Google token đến backend để kiểm tra user có role SELLER không
+      const loginResponse = await authApiService.googleLogin(accessToken);
+
+      // Lưu thông tin user vào localStorage
+      authApiService.saveUserSession(loginResponse);
 
       return result;
     } catch (error) {
@@ -60,15 +70,14 @@ class AuthService {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
 
-      // Get ID token and send to API
+      // Get ID token and send to backend API
       const idToken = await result.user.getIdToken();
-      await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ idToken }),
-      });
+
+      // Call backend login endpoint to get user info and JWT token
+      const loginResponse = await authApiService.firebaseLogin(idToken);
+
+      // Save user session data to localStorage
+      authApiService.saveUserSession(loginResponse);
 
       return result;
     } catch (error) {
@@ -105,11 +114,10 @@ class AuthService {
   // Đăng xuất
   async signOut(): Promise<void> {
     try {
-      // Call API to clear cookies
-      await fetch("/api/auth/logout", {
-        method: "POST",
-      });
+      // Xóa session từ localStorage
+      authApiService.clearUserSession();
 
+      // Đăng xuất Firebase
       await signOut(auth);
     } catch (error) {
       throw error;

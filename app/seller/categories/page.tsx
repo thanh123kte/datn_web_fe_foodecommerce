@@ -1,94 +1,160 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import MainLayout from "@/components/layout/MainLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
   Plus,
   Search,
-  Filter,
   Eye,
   Edit,
   Trash2,
-  MoreHorizontal,
   Grid,
   List,
   ArrowUpDown,
-  Calendar,
 } from "lucide-react";
 import {
-  Category,
-  getCategoriesAPI,
-  createCategoryAPI,
-  updateCategoryAPI,
-  deleteCategoryAPI,
-} from "@/lib/mockData/categories";
+  StoreCategory,
+  storeCategoryService,
+  CreateStoreCategoryDto,
+  UpdateStoreCategoryDto,
+} from "@/lib/services/storeCategoryService";
+import { categoriesService, Category } from "@/lib/services/categoriesService";
 import CategoryFormModal, {
   CategoryFormData,
 } from "@/components/categories/CategoryFormModal";
 import DeleteCategoryModal from "@/components/categories/DeleteCategoryModal";
 
 type ViewMode = "grid" | "table";
-type SortField = "name" | "productsCount" | "createdAt" | "updatedAt";
+type SortField = "name" | "createdAt" | "updatedAt";
 type SortOrder = "asc" | "desc";
 
 export default function CategoriesPage() {
   // State
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
+  // Platform categories filter
+  const [platformCategories, setPlatformCategories] = useState<Category[]>([]);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<
+    number | null
+  >(null);
+
   // Modal states
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null
-  );
+  const [selectedCategory, setSelectedCategory] =
+    useState<StoreCategory | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Get store info from auth context
+  const { currentStore, userRole, refreshStore } = useAuth();
+  const storeId = currentStore?.id;
+
+  // Ensure store info is loaded after auth (e.g., Google/Firebase login)
+  useEffect(() => {
+    if (userRole === "SELLER" && !storeId) {
+      refreshStore();
+    }
+  }, [userRole, storeId, refreshStore]);
+
+  // Load platform categories
+  const loadPlatformCategories = useCallback(async () => {
+    try {
+      const data = await categoriesService.getActiveCategories();
+      setPlatformCategories(data);
+    } catch (error) {
+      console.error("Lỗi khi tải danh mục toàn sàn:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPlatformCategories();
+  }, [loadPlatformCategories]);
+
   // Load categories
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
+    if (!storeId) {
+      setCategories([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await getCategoriesAPI({
-        search: searchTerm,
-        status: statusFilter === "all" ? undefined : statusFilter,
-        sortBy: sortField,
-        order: sortOrder,
+      const data = await storeCategoryService.searchByStore(storeId, {
+        search: searchTerm || undefined,
+        categoryId: selectedCategoryFilter || undefined,
       });
-      setCategories(data);
-      setFilteredCategories(data);
+
+      // Sort data
+      const sortedData = [...data].sort((a, b) => {
+        const aValue = a[sortField as keyof StoreCategory];
+        const bValue = b[sortField as keyof StoreCategory];
+
+        if (aValue === undefined || bValue === undefined) return 0;
+
+        if (sortOrder === "asc") {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+
+      setCategories(sortedData);
     } catch (error) {
       console.error("Lỗi khi tải danh mục:", error);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [storeId, searchTerm, selectedCategoryFilter, sortField, sortOrder]);
 
   // Effects
   useEffect(() => {
     loadCategories();
-  }, [searchTerm, statusFilter, sortField, sortOrder]);
+  }, [
+    searchTerm,
+    selectedCategoryFilter,
+    sortField,
+    sortOrder,
+    storeId,
+    loadCategories,
+  ]);
 
   // Handlers
   const handleCreateCategory = async (data: CategoryFormData) => {
+    if (!storeId) {
+      console.error("Store ID not available");
+      return;
+    }
+
     setModalLoading(true);
     try {
-      await createCategoryAPI(data);
+      const createData: CreateStoreCategoryDto = {
+        storeId: storeId,
+        name: data.name,
+        description: data.description,
+        categoryId: data.categoryId,
+      };
+      // Creating category
+      await storeCategoryService.create(createData);
       await loadCategories();
       setShowFormModal(false);
       // Show success message (you can implement toast notifications)
     } catch (error) {
       console.error("Lỗi khi tạo danh mục:", error);
+      // Log the full error response
+      if (error && typeof error === "object" && "response" in error) {
+        // Error response
+      }
     } finally {
       setModalLoading(false);
     }
@@ -99,7 +165,12 @@ export default function CategoriesPage() {
 
     setModalLoading(true);
     try {
-      await updateCategoryAPI(selectedCategory.id, data);
+      const updateData: UpdateStoreCategoryDto = {
+        name: data.name,
+        description: data.description,
+        categoryId: data.categoryId,
+      };
+      await storeCategoryService.update(selectedCategory.id, updateData);
       await loadCategories();
       setShowFormModal(false);
       setSelectedCategory(null);
@@ -115,7 +186,7 @@ export default function CategoriesPage() {
 
     setModalLoading(true);
     try {
-      await deleteCategoryAPI(selectedCategory.id);
+      await storeCategoryService.delete(selectedCategory.id);
       await loadCategories();
       setShowDeleteModal(false);
       setSelectedCategory(null);
@@ -135,12 +206,12 @@ export default function CategoriesPage() {
     }
   };
 
-  const openEditModal = (category: Category) => {
+  const openEditModal = (category: StoreCategory) => {
     setSelectedCategory(category);
     setShowFormModal(true);
   };
 
-  const openDeleteModal = (category: Category) => {
+  const openDeleteModal = (category: StoreCategory) => {
     setSelectedCategory(category);
     setShowDeleteModal(true);
   };
@@ -154,7 +225,7 @@ export default function CategoriesPage() {
             Category Management
           </h1>
           <p className="text-gray-600">
-            Manage your store's product categories
+            Manage your store&apos;s product categories
           </p>
         </div>
 
@@ -181,7 +252,7 @@ export default function CategoriesPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Active</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {categories.filter((c) => c.status === "active").length}
+                  {categories.length}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -193,13 +264,15 @@ export default function CategoriesPage() {
           <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Inactive</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {categories.filter((c) => c.status === "inactive").length}
+                <p className="text-sm font-medium text-gray-600">
+                  Platform Categories
+                </p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {new Set(categories.map((c) => c.categoryId)).size}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <Eye className="w-6 h-6 text-red-600" />
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Grid className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </Card>
@@ -207,11 +280,9 @@ export default function CategoriesPage() {
           <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Total Products
-                </p>
+                <p className="text-sm font-medium text-gray-600">Store ID</p>
                 <p className="text-2xl font-bold text-orange-600">
-                  {categories.reduce((sum, c) => sum + c.productsCount, 0)}
+                  {storeId || "N/A"}
                 </p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -237,18 +308,30 @@ export default function CategoriesPage() {
                 />
               </div>
 
-              {/* Status Filter */}
-              <select
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as typeof statusFilter)
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              {/* Platform Category Filter */}
+              <div className="min-w-48">
+                <select
+                  value={selectedCategoryFilter || ""}
+                  onChange={(e) =>
+                    setSelectedCategoryFilter(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                >
+                  <option value="">Danh mục sàn</option>
+                  {platformCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Category Count Info */}
+              <div className="px-3 py-2 text-sm text-gray-600 bg-gray-50 rounded-lg">
+                {categories.length} categories
+              </div>
             </div>
 
             {/* Right side - View Mode and Add Button */}
@@ -297,6 +380,22 @@ export default function CategoriesPage() {
               <span className="ml-3 text-gray-600">Loading...</span>
             </div>
           </Card>
+        ) : !storeId ? (
+          <Card className="p-12 text-center">
+            <Grid className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Store Information Not Available
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Please make sure you have a store associated with your account or
+              contact support.
+            </p>
+            {userRole !== "SELLER" && (
+              <p className="text-red-600 text-sm">
+                You need SELLER role to access this feature.
+              </p>
+            )}
+          </Card>
         ) : categories.length === 0 ? (
           <Card className="p-12 text-center">
             <Grid className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -309,6 +408,7 @@ export default function CategoriesPage() {
             <Button
               onClick={() => setShowFormModal(true)}
               className="bg-orange-500 hover:bg-orange-600"
+              disabled={!storeId}
             >
               <Plus className="w-5 h-5 mr-2" />
               Add First Category
@@ -334,13 +434,7 @@ export default function CategoriesPage() {
                       Description
                     </th>
                     <th className="text-left py-4 px-6 font-medium text-gray-700">
-                      <button
-                        onClick={() => handleSort("productsCount")}
-                        className="flex items-center gap-2 hover:text-orange-600"
-                      >
-                        Products
-                        <ArrowUpDown className="w-4 h-4" />
-                      </button>
+                      Platform Category
                     </th>
                     <th className="text-left py-4 px-6 font-medium text-gray-700">
                       Status
@@ -366,42 +460,21 @@ export default function CategoriesPage() {
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          {category.image ? (
-                            <img
-                              src={category.image}
-                              alt={category.name}
-                              className="w-12 h-12 object-cover rounded-lg"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                              <Grid className="w-6 h-6 text-gray-400" />
-                            </div>
-                          )}
-                          <div>
-                            <h3 className="font-medium text-gray-900">
-                              {category.name}
-                            </h3>
-                          </div>
-                        </div>
+                        <h3 className="font-medium text-gray-900">
+                          {category.name}
+                        </h3>
                       </td>
                       <td className="py-4 px-6 text-gray-600 max-w-xs truncate">
                         {category.description}
                       </td>
                       <td className="py-4 px-6">
-                        <span className="text-gray-900 font-medium">
-                          {category.productsCount} products
+                        <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {category.categoryName || "N/A"}
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <span
-                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            category.status === "active"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {category.status === "active" ? "Active" : "Inactive"}
+                        <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Active
                         </span>
                       </td>
                       <td className="py-4 px-6 text-gray-600">
@@ -439,38 +512,17 @@ export default function CategoriesPage() {
             {categories.map((category) => (
               <Card
                 key={category.id}
-                className="overflow-hidden hover:shadow-lg transition-shadow"
+                className="hover:shadow-lg transition-shadow"
               >
-                {/* Image */}
-                <div className="aspect-video bg-gray-100">
-                  {category.image ? (
-                    <img
-                      src={category.image}
-                      alt={category.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Grid className="w-12 h-12 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-
                 {/* Content */}
-                <div className="p-4">
+                <div className="p-6">
                   {/* Header */}
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold text-gray-900 truncate">
                       {category.name}
                     </h3>
-                    <span
-                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        category.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {category.status === "active" ? "Active" : "Inactive"}
+                    <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Active
                     </span>
                   </div>
 
@@ -479,9 +531,16 @@ export default function CategoriesPage() {
                     {category.description}
                   </p>
 
+                  {/* Platform Category */}
+                  <div className="mb-3">
+                    <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {category.categoryName || "N/A"}
+                    </span>
+                  </div>
+
                   {/* Stats */}
                   <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                    <span>{category.productsCount} products</span>
+                    <span>Store {category.storeId}</span>
                     <span>
                       {new Date(category.createdAt).toLocaleDateString("en-US")}
                     </span>
@@ -524,7 +583,7 @@ export default function CategoriesPage() {
         onSubmit={
           selectedCategory ? handleUpdateCategory : handleCreateCategory
         }
-        category={selectedCategory}
+        category={selectedCategory || undefined}
         isLoading={modalLoading}
       />
 

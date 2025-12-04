@@ -1,6 +1,5 @@
 "use client";
-
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -10,13 +9,11 @@ import {
 } from "./components/ProfileInfo";
 import { AddressList } from "./components/AddressList";
 import { SettingsSection } from "./components/SettingsSection";
-import {
-  mockSellerProfile,
-  profileAPI,
-  User,
-  Store,
-  Address,
-} from "@/lib/mockData/profile";
+import { User, Store, Address } from "@/lib/mockData/profile";
+import { profileService, SellerProfile } from "@/lib/services/profileService";
+import { authApiService } from "@/lib/services/authApiService";
+import { useAuth } from "@/contexts/AuthContext";
+import { buildAbsoluteUrl } from "@/lib/config/env";
 import {
   User as UserIcon,
   Store as StoreIcon,
@@ -27,56 +24,152 @@ import {
 import { toast } from "sonner";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState(mockSellerProfile);
+  const { userRole } = useAuth();
+  const [profile, setProfile] = useState<SellerProfile | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Helper function to resolve avatar - handle both absolute and relative URLs
+  const resolveAvatar = useCallback(
+    (url?: string | null, name?: string | null) => {
+      // If no URL, use generated avatar
+      if (!url) {
+        const safeName = encodeURIComponent(name || "User");
+        return `https://ui-avatars.com/api/?name=${safeName}&background=E5E7EB&color=111827`;
+      }
+
+      // If absolute URL (http/https), use as is
+      if (/^https?:\/\//i.test(url)) {
+        return url;
+      }
+
+      // Fix backend URL that starts with /users/ - should be /uploads/users/
+      let normalizedUrl = url;
+      if (url.startsWith("/users/")) {
+        normalizedUrl = `/uploads${url}`;
+      } else if (url.startsWith("users/")) {
+        normalizedUrl = `/uploads/${url}`;
+      }
+
+      // Build absolute URL
+      const absolute = buildAbsoluteUrl(normalizedUrl);
+
+      if (absolute) {
+        return absolute;
+      }
+
+      // Fallback to generated avatar if buildAbsoluteUrl fails
+      const safeName = encodeURIComponent(name || "User");
+      return `https://ui-avatars.com/api/?name=${safeName}&background=E5E7EB&color=111827`;
+    },
+    []
+  );
+
+  // Initial fetch
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const currentUser = authApiService.getCurrentUser();
+      if (!currentUser?.id) {
+        setProfile(null);
+        return;
+      }
+      setLoading(true);
+      try {
+        const data = await profileService.getSellerProfile(currentUser.id);
+
+        // Apply avatar resolution logic
+        const profileWithResolvedAvatar: SellerProfile = {
+          ...data,
+          user: {
+            ...data.user,
+            avatar_url: resolveAvatar(
+              data.user.avatar_url,
+              data.user.full_name
+            ),
+          },
+        };
+
+        setProfile(profileWithResolvedAvatar);
+      } catch (err) {
+        console.error("Error loading profile", err);
+        toast.error("Không tải được thông tin hồ sơ");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [userRole, resolveAvatar]);
+
   // User update handler
-  const handleUserUpdate = useCallback(async (userData: Partial<User>) => {
-    setLoading(true);
-    try {
-      const updatedUser = await profileAPI.updateUser(userData);
-      setProfile((prev) => ({
-        ...prev,
-        user: { ...prev.user, ...updatedUser },
-      }));
-      toast.success("Personal information updated successfully");
-    } catch {
-      toast.error("Error updating personal information");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const handleUserUpdate = useCallback(
+    async (userData: Partial<User>) => {
+      if (!profile) return;
+      setLoading(true);
+      try {
+        const updatedUser = await profileService.updateUser(
+          profile.user.id,
+          userData
+        );
+
+        // Apply avatar resolution if avatar_url exists in update
+        const userWithResolvedAvatar = {
+          ...updatedUser,
+          avatar_url: resolveAvatar(
+            updatedUser.avatar_url || profile.user.avatar_url,
+            updatedUser.full_name || profile.user.full_name
+          ),
+        };
+
+        setProfile((prev) =>
+          prev
+            ? { ...prev, user: { ...prev.user, ...userWithResolvedAvatar } }
+            : prev
+        );
+        toast.success("Personal information updated successfully");
+      } catch {
+        toast.error("Error updating personal information");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [profile, resolveAvatar]
+  );
 
   // Store update handler
-  const handleStoreUpdate = useCallback(async (storeData: Partial<Store>) => {
-    setLoading(true);
-    try {
-      const updatedStore = await profileAPI.updateStore(storeData);
-      setProfile((prev) => ({
-        ...prev,
-        store: { ...prev.store, ...updatedStore },
-      }));
-      toast.success("Store information updated successfully");
-    } catch {
-      toast.error("Error updating store information");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const handleStoreUpdate = useCallback(
+    async (storeData: Partial<Store>) => {
+      if (!profile?.store.id) return;
+      setLoading(true);
+      try {
+        const updatedStore = await profileService.updateStore(
+          profile.store.id,
+          storeData
+        );
+        setProfile((prev) =>
+          prev ? { ...prev, store: { ...prev.store, ...updatedStore } } : prev
+        );
+        toast.success("Store information updated successfully");
+      } catch {
+        toast.error("Error updating store information");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [profile?.store.id]
+  );
 
   // Business hours update handler
   const handleBusinessHoursUpdate = useCallback(
     async (openTime: string, closeTime: string) => {
+      if (!profile?.store.id) return;
       setLoading(true);
       try {
-        const updatedStore = await profileAPI.updateStore({
-          open_time: openTime,
-          close_time: closeTime,
-        });
-        setProfile((prev) => ({
-          ...prev,
-          store: { ...prev.store, ...updatedStore },
-        }));
+        const updatedStore = await profileService.updateStore(
+          profile.store.id,
+          { open_time: openTime, close_time: closeTime }
+        );
+        setProfile((prev) =>
+          prev ? { ...prev, store: { ...prev.store, ...updatedStore } } : prev
+        );
         toast.success("Business hours updated successfully");
       } catch {
         toast.error("Error updating business hours");
@@ -84,58 +177,62 @@ export default function ProfilePage() {
         setLoading(false);
       }
     },
-    []
+    [profile?.store.id]
   );
 
   // Avatar upload handler
-  const handleAvatarUpload = useCallback(async (file: File) => {
-    setLoading(true);
-    try {
-      const avatarUrl = await profileAPI.uploadImage(file);
-      const updatedUser = await profileAPI.updateUser({ avatar: avatarUrl });
-      setProfile((prev) => ({
-        ...prev,
-        user: { ...prev.user, ...updatedUser },
-      }));
-      toast.success("Avatar updated successfully");
-    } catch {
-      toast.error("Error uploading avatar");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const handleAvatarUpload = useCallback(
+    async (file: File) => {
+      if (!profile) return;
+      setLoading(true);
+      try {
+        const updatedUser = await profileService.uploadAvatar(
+          profile.user.id,
+          file
+        );
 
-  // Store image upload handler
-  const handleStoreImageUpload = useCallback(async (file: File) => {
-    setLoading(true);
-    try {
-      const imageUrl = await profileAPI.uploadImage(file);
-      const updatedStore = await profileAPI.updateStore({ image: imageUrl });
-      setProfile((prev) => ({
-        ...prev,
-        store: { ...prev.store, ...updatedStore },
-      }));
-      toast.success("Store image updated successfully");
-    } catch {
-      toast.error("Error uploading store image");
-    } finally {
-      setLoading(false);
-    }
+        // Apply avatar resolution to updated user
+        const userWithResolvedAvatar = {
+          ...updatedUser,
+          avatar_url: resolveAvatar(
+            updatedUser.avatar_url,
+            updatedUser.full_name
+          ),
+        };
+
+        setProfile((prev) =>
+          prev
+            ? { ...prev, user: { ...prev.user, ...userWithResolvedAvatar } }
+            : prev
+        );
+        toast.success("Avatar updated successfully");
+      } catch {
+        toast.error("Error uploading avatar");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [profile, resolveAvatar]
+  );
+
+  // Store image upload handler (not supported yet)
+  const handleStoreImageUpload = useCallback(async () => {
+    toast.error("Store image upload is not supported yet.");
   }, []);
 
   // Address handlers
   const handleAddAddress = useCallback(
     async (addressData: Omit<Address, "id" | "created_at" | "updated_at">) => {
+      if (!profile) return;
       setLoading(true);
       try {
-        const newAddress = await profileAPI.addAddress({
-          ...addressData,
-          user_id: profile.user.id,
-        });
-        setProfile((prev) => ({
-          ...prev,
-          addresses: [...prev.addresses, newAddress],
-        }));
+        const newAddress = await profileService.addAddress(
+          profile.user.id,
+          addressData
+        );
+        setProfile((prev) =>
+          prev ? { ...prev, addresses: [...prev.addresses, newAddress] } : prev
+        );
         toast.success("Address added successfully");
       } catch {
         toast.error("Error adding address");
@@ -143,23 +240,29 @@ export default function ProfilePage() {
         setLoading(false);
       }
     },
-    [profile.user.id]
+    [profile]
   );
 
   const handleUpdateAddress = useCallback(
     async (addressId: string, addressData: Partial<Address>) => {
+      if (!profile) return;
       setLoading(true);
       try {
-        const updatedAddress = await profileAPI.updateAddress(
+        const updatedAddress = await profileService.updateAddress(
           addressId,
-          addressData
+          addressData,
+          profile.user.id
         );
-        setProfile((prev) => ({
-          ...prev,
-          addresses: prev.addresses.map((addr) =>
-            addr.id === addressId ? { ...addr, ...updatedAddress } : addr
-          ),
-        }));
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                addresses: prev.addresses.map((addr) =>
+                  addr.id === addressId ? { ...addr, ...updatedAddress } : addr
+                ),
+              }
+            : prev
+        );
         toast.success("Address updated successfully");
       } catch {
         toast.error("Error updating address");
@@ -167,31 +270,41 @@ export default function ProfilePage() {
         setLoading(false);
       }
     },
-    []
+    [profile]
   );
 
-  const handleDeleteAddress = useCallback(async (addressId: string) => {
-    setLoading(true);
-    try {
-      await profileAPI.deleteAddress(addressId);
-      setProfile((prev) => ({
-        ...prev,
-        addresses: prev.addresses.filter((addr) => addr.id !== addressId),
-      }));
-      toast.success("Address deleted successfully");
-    } catch {
-      toast.error("Error deleting address");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const handleDeleteAddress = useCallback(
+    async (addressId: string) => {
+      if (!profile) return;
+      setLoading(true);
+      try {
+        await profileService.deleteAddress(addressId);
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                addresses: prev.addresses.filter(
+                  (addr) => addr.id !== addressId
+                ),
+              }
+            : prev
+        );
+        toast.success("Address deleted successfully");
+      } catch {
+        toast.error("Error deleting address");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [profile]
+  );
 
   // Settings handlers
   const handleChangePassword = useCallback(
     async (oldPassword: string, newPassword: string) => {
       setLoading(true);
       try {
-        await profileAPI.changePassword(oldPassword, newPassword);
+        await profileService.changePassword(oldPassword, newPassword);
         toast.success("Password changed successfully");
       } catch {
         toast.error("Error changing password");
@@ -203,11 +316,17 @@ export default function ProfilePage() {
   );
 
   const handleUpdateNotifications = useCallback(
-    async (settings: Record<string, boolean>) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async (settings: {
+      email_notifications: boolean;
+      order_notifications: boolean;
+      promotion_notifications: boolean;
+      review_notifications: boolean;
+    }) => {
       setLoading(true);
       try {
-        await profileAPI.updateSettings(settings);
-        toast.success("Notification settings updated successfully");
+        // TODO: Update settings properly with correct structure
+        toast.info("Notification settings update not implemented yet");
       } catch {
         toast.error("Error updating settings");
       } finally {
@@ -216,6 +335,21 @@ export default function ProfilePage() {
     },
     []
   );
+
+  if (!profile) {
+    return (
+      <MainLayout userRole="seller" title="Store Profile">
+        <div className="p-6">
+          <div className="flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="ml-3 text-gray-600">
+              {loading ? "Loading profile..." : "No profile data"}
+            </span>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout userRole="seller" title="Store Profile">

@@ -27,26 +27,26 @@ interface OrderFiltersProps {
 }
 
 const ORDER_STATUS_OPTIONS = [
-  { value: "ALL" as const, label: "All Status", count: 0 },
-  { value: "PENDING" as OrderStatus, label: "Pending", count: 0 },
-  { value: "CONFIRMED" as OrderStatus, label: "Confirmed", count: 0 },
-  { value: "PREPARING" as OrderStatus, label: "Preparing", count: 0 },
-  { value: "SHIPPING" as OrderStatus, label: "Shipping", count: 0 },
-  { value: "DELIVERED" as OrderStatus, label: "Delivered", count: 0 },
-  { value: "CANCELLED" as OrderStatus, label: "Cancelled", count: 0 },
+  { value: "ALL" as const, label: "Tất cả", count: 0 },
+  { value: "PENDING" as OrderStatus, label: "Chờ xử lý", count: 0 },
+  { value: "CONFIRMED" as OrderStatus, label: "Đã xác nhận", count: 0 },
+  { value: "PREPARING" as OrderStatus, label: "Đang chuẩn bị", count: 0 },
+  { value: "SHIPPING" as OrderStatus, label: "Đang giao", count: 0 },
+  { value: "DELIVERED" as OrderStatus, label: "Đã giao", count: 0 },
+  { value: "CANCELLED" as OrderStatus, label: "Đã hủy", count: 0 },
 ];
 
 const PAYMENT_STATUS_OPTIONS = [
-  { value: "ALL" as const, label: "All Payment Status" },
-  { value: "PENDING" as PaymentStatus, label: "Payment Pending" },
-  { value: "SUCCESS" as PaymentStatus, label: "Payment Success" },
-  { value: "FAILED" as PaymentStatus, label: "Payment Failed" },
+  { value: "ALL" as const, label: "Tất cả thanh toán" },
+  { value: "PENDING" as PaymentStatus, label: "Chờ thanh toán" },
+  { value: "SUCCESS" as PaymentStatus, label: "Thanh toán thành công" },
+  { value: "FAILED" as PaymentStatus, label: "Thanh toán thất bại" },
 ];
 
 const SORT_OPTIONS = [
-  { value: "createdAt" as const, label: "Order Date" },
-  { value: "totalAmount" as const, label: "Total Amount" },
-  { value: "customerName" as const, label: "Customer Name" },
+  { value: "createdAt" as const, label: "Ngày đằt" },
+  { value: "totalAmount" as const, label: "Tổng tiền" },
+  { value: "customerName" as const, label: "Tên khách hàng" },
 ];
 
 export default function OrderFilters({
@@ -57,6 +57,7 @@ export default function OrderFilters({
   className = "",
 }: OrderFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [searchInput, setSearchInput] = useState(filters.search);
 
   const updateFilter = (key: keyof OrderFilters, value: any) => {
     onFiltersChange({
@@ -65,7 +66,19 @@ export default function OrderFilters({
     });
   };
 
+  const handleSearch = () => {
+    updateFilter("search", searchInput);
+    onApply();
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
   const resetFilters = () => {
+    setSearchInput("");
     onFiltersChange({
       search: "",
       status: "ALL",
@@ -93,9 +106,10 @@ export default function OrderFilters({
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
-              placeholder="Search by order ID, customer name, phone, or product..."
-              value={filters.search}
-              onChange={(e) => updateFilter("search", e.target.value)}
+              placeholder="Tìm theo mã đơn"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyPress={handleKeyPress}
               className="pl-10"
               disabled={isLoading}
             />
@@ -109,23 +123,23 @@ export default function OrderFilters({
               className="flex items-center gap-2"
             >
               <Filter className="w-4 h-4" />
-              Advanced Filters
+              Bộ Lọc Nâng Cao
               {hasActiveFilters && (
                 <Badge variant="secondary" className="ml-1">
-                  Active
+                  Đang lọc
                 </Badge>
               )}
             </Button>
 
             <Button
-              onClick={onApply}
+              onClick={handleSearch}
               disabled={isLoading}
               className="bg-orange-500 hover:bg-orange-600"
             >
               {isLoading ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
-                "Search"
+                "Tìm Kiếm"
               )}
             </Button>
           </div>
@@ -160,7 +174,7 @@ export default function OrderFilters({
         <Card className="p-4 mb-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Advanced Filters</h3>
+              <h3 className="font-semibold text-gray-900">Bộ Lọc Nâng Cao</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -174,7 +188,7 @@ export default function OrderFilters({
               {/* Payment Status Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Payment Status
+                  Trạng Thái Thanh Toán
                 </label>
                 <select
                   value={filters.paymentStatus}
@@ -195,7 +209,7 @@ export default function OrderFilters({
               {/* Date From */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  From Date
+                  Từ Ngày
                 </label>
                 <Input
                   type="date"
@@ -208,7 +222,7 @@ export default function OrderFilters({
               {/* Date To */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  To Date
+                  Đến Ngày
                 </label>
                 <Input
                   type="date"
@@ -221,7 +235,7 @@ export default function OrderFilters({
               {/* Sort Options */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sort By
+                  Sắp Xếp Theo
                 </label>
                 <div className="flex gap-2">
                   <select
@@ -266,19 +280,19 @@ export default function OrderFilters({
                 onClick={resetFilters}
                 disabled={isLoading || !hasActiveFilters}
               >
-                Reset Filters
+                Đặt Lại
               </Button>
 
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setIsExpanded(false)}>
-                  Close
+                  Đóng
                 </Button>
                 <Button
                   onClick={onApply}
                   disabled={isLoading}
                   className="bg-orange-500 hover:bg-orange-600"
                 >
-                  Apply Filters
+                  Áp Dụng
                 </Button>
               </div>
             </div>

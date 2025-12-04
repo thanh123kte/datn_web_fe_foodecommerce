@@ -3,13 +3,13 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, AlertTriangle } from "lucide-react";
-import { Category } from "@/lib/mockData/categories";
+import { StoreCategory } from "@/lib/services/storeCategoryService";
 
 interface DeleteCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  category: Category | null;
+  category: StoreCategory | null;
   isLoading?: boolean;
 }
 

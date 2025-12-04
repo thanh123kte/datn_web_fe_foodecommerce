@@ -28,7 +28,7 @@ export default function LoginForm({
   const { signIn, loading } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("admin@qtifood.com");
+  const [email, setEmail] = useState("seller@qtifood.com");
   const [password, setPassword] = useState("123456");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
@@ -105,7 +105,7 @@ export default function LoginForm({
         <Input
           id="email"
           type="email"
-          placeholder="admin@qtifood.com"
+          placeholder="seller@qtifood.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="h-12"

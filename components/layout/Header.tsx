@@ -34,7 +34,7 @@ export default function Header({
       try {
         setUser(JSON.parse(userData));
       } catch (error) {
-        console.error("Error parsing user data:", error);
+        // Error parsing user data
       }
     }
   }, [userRole]);
