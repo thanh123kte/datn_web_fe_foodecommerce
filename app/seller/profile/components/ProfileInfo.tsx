@@ -21,6 +21,9 @@ const resolveMediaUrl = (
 ) => {
   if (!url) return fallback;
 
+  // Ignore placeholder values like "string"
+  if (url.trim().toLowerCase() === "string") return fallback;
+
   // If absolute URL (including ui-avatars.com), keep as is
   if (/^https?:\/\//i.test(url)) return url;
 
@@ -52,8 +55,8 @@ interface PersonalInfoProps {
 
 interface StoreInfoProps {
   store: Store;
-  onUpdate: (storeData: Partial<Store>) => void;
-  onUploadImage: (file: File) => void;
+  onUpdate: (storeData: Partial<Store>) => Promise<void>;
+  onUploadImage: (file: File) => Promise<void>;
   loading?: boolean;
 }
 
@@ -272,9 +275,23 @@ export function StoreInfo({
     address: store.address || "",
   });
 
-  const handleSave = () => {
-    onUpdate(formData);
-    setIsEditing(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+
+  const handleSave = async () => {
+    try {
+      await onUpdate(formData);
+
+      if (selectedImageFile) {
+        await onUploadImage(selectedImageFile);
+      }
+
+      setPreviewImage(null);
+      setSelectedImageFile(null);
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Error saving store info:", err);
+    }
   };
 
   const handleCancel = () => {
@@ -284,13 +301,17 @@ export function StoreInfo({
       phone: store.phone || "",
       address: store.address || "",
     });
+    setPreviewImage(null);
+    setSelectedImageFile(null);
     setIsEditing(false);
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      onUploadImage(file);
+      const previewUrl = URL.createObjectURL(file);
+      setPreviewImage(previewUrl);
+      setSelectedImageFile(file);
     }
   };
 
@@ -371,14 +392,15 @@ export function StoreInfo({
         <div className="flex flex-col items-center">
           <div className="relative">
             <Image
-              src={resolveMediaUrl(
-                store.image_url,
-                "/images/default-store.png"
-              )}
+              src={
+                previewImage ||
+                resolveMediaUrl(store.image_url, "/images/default-store.png")
+              }
               alt="Store"
               width={120}
               height={120}
               className="rounded-lg object-cover border-2 border-gray-200"
+              unoptimized
             />
             {isEditing && (
               <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
@@ -539,7 +561,7 @@ export function BusinessHours({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Clock className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold">Business Hours</h3>
+            <h3 className="text-lg font-semibold">Open Time</h3>
           </div>
           <span
             className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${status.color}`}

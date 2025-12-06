@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Bell, Search, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import UserDropdown from "./UserDropdown";
-import { MockSeller } from "@/lib/mockData/sellers";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -23,21 +23,11 @@ export default function Header({
   userRole = "seller",
 }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [user, setUser] = useState<MockSeller | null>(null);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    // Get user data from storage based on role
-    const userData =
-      localStorage.getItem(`${userRole}_data`) ||
-      sessionStorage.getItem(`${userRole}_data`);
-    if (userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (error) {
-        // Error parsing user data
-      }
-    }
-  }, [userRole]);
+  const userName = user?.displayName || user?.email || "User";
+  const userEmail = user?.email || "";
+  const userAvatar = user?.photoURL || undefined;
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 h-16">
@@ -118,8 +108,9 @@ export default function Header({
           {/* User Dropdown */}
           <UserDropdown
             userRole={userRole}
-            userName={user?.name}
-            userEmail={user?.email}
+            userName={userName}
+            userEmail={userEmail}
+            userAvatar={userAvatar}
           />
         </div>
       </div>

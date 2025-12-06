@@ -83,13 +83,13 @@ export default function SellerDashboard() {
                 </div>
               </div>
             </div>
-            <Button
+            {/* <Button
               onClick={handleLogout}
               variant="outline"
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               Đăng xuất
-            </Button>
+            </Button> */}
           </div>
         </Card>
 

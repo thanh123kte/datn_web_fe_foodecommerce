@@ -12,6 +12,7 @@ import {
   Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserDropdownProps {
   userRole?: "admin" | "seller";
@@ -28,6 +29,7 @@ export default function UserDropdown({
 }: UserDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { signOut } = useAuth();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -45,22 +47,17 @@ export default function UserDropdown({
     };
   }, []);
 
-  const handleLogout = () => {
-    // Clear authentication data
-    localStorage.removeItem("seller_data");
-    localStorage.removeItem("seller_token");
-    localStorage.removeItem("admin_data");
-    localStorage.removeItem("admin_token");
-    sessionStorage.removeItem("seller_data");
-    sessionStorage.removeItem("seller_token");
-    sessionStorage.removeItem("admin_data");
-    sessionStorage.removeItem("admin_token");
-
-    // Redirect based on role
-    if (userRole === "seller") {
-      window.location.href = "/seller/login";
-    } else {
-      window.location.href = "/admin/login";
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      // Redirect based on role
+      if (userRole === "seller") {
+        window.location.href = "/seller/login";
+      } else {
+        window.location.href = "/admin/login";
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
     }
   };
 

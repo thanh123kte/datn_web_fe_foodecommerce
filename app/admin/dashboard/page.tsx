@@ -1,3 +1,6 @@
+"use client";
+
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Users,
   Package,
@@ -52,6 +55,9 @@ const statsCards = [
 ];
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+  const displayName = user?.displayName || user?.email || "Admin";
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -60,7 +66,8 @@ export default function AdminDashboard() {
           Admin Dashboard
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Welcome back! Here's what's happening with QTI Food today.
+          Welcome back, {displayName}! Here&apos;s what&apos;s happening with
+          QTI Food today.
         </p>
       </div>
 

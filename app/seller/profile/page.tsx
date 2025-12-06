@@ -7,20 +7,13 @@ import {
   StoreInfo,
   BusinessHours,
 } from "./components/ProfileInfo";
-import { AddressList } from "./components/AddressList";
 import { SettingsSection } from "./components/SettingsSection";
-import { User, Store, Address } from "@/lib/mockData/profile";
+import { User, Store } from "@/lib/mockData/profile";
 import { profileService, SellerProfile } from "@/lib/services/profileService";
 import { authApiService } from "@/lib/services/authApiService";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildAbsoluteUrl } from "@/lib/config/env";
-import {
-  User as UserIcon,
-  Store as StoreIcon,
-  MapPin,
-  Settings,
-  Clock,
-} from "lucide-react";
+import { User as UserIcon, Store as StoreIcon, Settings } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ProfilePage() {
@@ -157,7 +150,7 @@ export default function ProfilePage() {
     [profile?.store.id]
   );
 
-  // Business hours update handler
+  // Open time update handler
   const handleBusinessHoursUpdate = useCallback(
     async (openTime: string, closeTime: string) => {
       if (!profile?.store.id) return;
@@ -170,9 +163,9 @@ export default function ProfilePage() {
         setProfile((prev) =>
           prev ? { ...prev, store: { ...prev.store, ...updatedStore } } : prev
         );
-        toast.success("Business hours updated successfully");
+        toast.success("Open time updated successfully");
       } catch {
-        toast.error("Error updating business hours");
+        toast.error("Error updating open time");
       } finally {
         setLoading(false);
       }
@@ -215,88 +208,28 @@ export default function ProfilePage() {
     [profile, resolveAvatar]
   );
 
-  // Store image upload handler (not supported yet)
-  const handleStoreImageUpload = useCallback(async () => {
-    toast.error("Store image upload is not supported yet.");
-  }, []);
-
-  // Address handlers
-  const handleAddAddress = useCallback(
-    async (addressData: Omit<Address, "id" | "created_at" | "updated_at">) => {
-      if (!profile) return;
+  // Store image upload handler
+  const handleStoreImageUpload = useCallback(
+    async (file: File) => {
+      if (!profile?.store.id) return;
       setLoading(true);
       try {
-        const newAddress = await profileService.addAddress(
-          profile.user.id,
-          addressData
+        const updatedStore = await profileService.uploadStoreImage(
+          profile.store.id,
+          file
         );
+
         setProfile((prev) =>
-          prev ? { ...prev, addresses: [...prev.addresses, newAddress] } : prev
+          prev ? { ...prev, store: { ...prev.store, ...updatedStore } } : prev
         );
-        toast.success("Address added successfully");
+        toast.success("Store image updated successfully");
       } catch {
-        toast.error("Error adding address");
+        toast.error("Error uploading store image");
       } finally {
         setLoading(false);
       }
     },
-    [profile]
-  );
-
-  const handleUpdateAddress = useCallback(
-    async (addressId: string, addressData: Partial<Address>) => {
-      if (!profile) return;
-      setLoading(true);
-      try {
-        const updatedAddress = await profileService.updateAddress(
-          addressId,
-          addressData,
-          profile.user.id
-        );
-        setProfile((prev) =>
-          prev
-            ? {
-                ...prev,
-                addresses: prev.addresses.map((addr) =>
-                  addr.id === addressId ? { ...addr, ...updatedAddress } : addr
-                ),
-              }
-            : prev
-        );
-        toast.success("Address updated successfully");
-      } catch {
-        toast.error("Error updating address");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [profile]
-  );
-
-  const handleDeleteAddress = useCallback(
-    async (addressId: string) => {
-      if (!profile) return;
-      setLoading(true);
-      try {
-        await profileService.deleteAddress(addressId);
-        setProfile((prev) =>
-          prev
-            ? {
-                ...prev,
-                addresses: prev.addresses.filter(
-                  (addr) => addr.id !== addressId
-                ),
-              }
-            : prev
-        );
-        toast.success("Address deleted successfully");
-      } catch {
-        toast.error("Error deleting address");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [profile]
+    [profile?.store.id]
   );
 
   // Settings handlers
@@ -365,7 +298,7 @@ export default function ProfilePage() {
         </div>
 
         <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
             <TabsTrigger value="personal" className="flex items-center gap-2">
               <UserIcon className="w-4 h-4" />
               <span className="hidden sm:inline">Personal</span>
@@ -373,14 +306,6 @@ export default function ProfilePage() {
             <TabsTrigger value="store" className="flex items-center gap-2">
               <StoreIcon className="w-4 h-4" />
               <span className="hidden sm:inline">Store</span>
-            </TabsTrigger>
-            <TabsTrigger value="hours" className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <span className="hidden sm:inline">Hours</span>
-            </TabsTrigger>
-            <TabsTrigger value="address" className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              <span className="hidden sm:inline">Address</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
@@ -404,23 +329,10 @@ export default function ProfilePage() {
               onUploadImage={handleStoreImageUpload}
               loading={loading}
             />
-          </TabsContent>
-
-          <TabsContent value="hours" className="space-y-6">
             <BusinessHours
               openTime={profile.store.open_time}
               closeTime={profile.store.close_time}
               onUpdate={handleBusinessHoursUpdate}
-              loading={loading}
-            />
-          </TabsContent>
-
-          <TabsContent value="address" className="space-y-6">
-            <AddressList
-              addresses={profile.addresses}
-              onAdd={handleAddAddress}
-              onUpdate={handleUpdateAddress}
-              onDelete={handleDeleteAddress}
               loading={loading}
             />
           </TabsContent>

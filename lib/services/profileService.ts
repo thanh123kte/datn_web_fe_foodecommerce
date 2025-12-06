@@ -71,21 +71,33 @@ const mapUser = (u: BackendUser): User => ({
   updated_at: u.updatedAt,
 });
 
-const mapStore = (s: BackendStore, ownerId: string): Store => ({
-  id: String(s.id),
-  owner_id: s.ownerId || ownerId,
-  name: s.name,
-  description: s.description,
-  address: s.address,
-  phone: s.phone,
-  image_url: buildAbsoluteUrl(s.imageUrl),
-  store_status: s.status,
-  open_status: (s.opStatus as Store["open_status"]) || "OPEN",
-  open_time: s.openTime || "",
-  close_time: s.closeTime || "",
-  created_at: s.createdAt,
-  updated_at: s.updatedAt,
-});
+const mapStore = (s: BackendStore, ownerId: string): Store => {
+  // Normalize image URL to include /uploads/ prefix
+  let normalizedImageUrl = s.imageUrl;
+  if (normalizedImageUrl) {
+    if (normalizedImageUrl.startsWith("stores/")) {
+      normalizedImageUrl = `/uploads/${normalizedImageUrl}`;
+    } else if (normalizedImageUrl.startsWith("/stores/")) {
+      normalizedImageUrl = `/uploads${normalizedImageUrl}`;
+    }
+  }
+
+  return {
+    id: String(s.id),
+    owner_id: s.ownerId || ownerId,
+    name: s.name,
+    description: s.description,
+    address: s.address,
+    phone: s.phone,
+    image_url: buildAbsoluteUrl(normalizedImageUrl),
+    store_status: s.status,
+    open_status: (s.opStatus as Store["open_status"]) || "OPEN",
+    open_time: s.openTime || "",
+    close_time: s.closeTime || "",
+    created_at: s.createdAt,
+    updated_at: s.updatedAt,
+  };
+};
 
 const emptyStore = (ownerId: string): Store => ({
   id: "",
@@ -189,6 +201,21 @@ export const profileService = {
       }
     );
     return mapUser(res.data);
+  },
+
+  async uploadStoreImage(storeId: string, file: File): Promise<Store> {
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await axiosInstance.post<BackendStore>(
+      `/api/stores/${storeId}/image`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return mapStore(res.data, res.data.ownerId || "");
   },
 
   async updateStore(storeId: string, data: Partial<Store>): Promise<Store> {
