@@ -59,6 +59,7 @@ export default function AdminDashboard() {
   const displayName = user?.displayName || user?.email || "Admin";
 
   return (
+    
     <div className="space-y-8">
       {/* Page Header */}
       <div>

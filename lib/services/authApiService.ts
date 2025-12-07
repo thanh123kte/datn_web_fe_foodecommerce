@@ -102,9 +102,13 @@ class AuthApiService {
   }
 
   // Đăng nhập bằng Firebase ID token
-  async firebaseLogin(idToken: string): Promise<LoginResponse> {
+  async firebaseLogin(
+    idToken: string,
+    requiredRole: "ADMIN" | "SELLER"
+  ): Promise<LoginResponse> {
     const response = await axiosInstance.post(`${this.basePath}/firebase`, {
       idToken,
+      requiredRole,
     });
     return response.data;
   }

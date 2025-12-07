@@ -17,12 +17,14 @@ interface LoginFormProps {
     href: string;
   };
   redirectPath?: string;
+  requiredRole?: "ADMIN" | "SELLER";
 }
 
 export default function LoginForm({
   submitButtonText = "Đăng nhập",
   signupLink,
   redirectPath = "/",
+  requiredRole = "SELLER",
 }: LoginFormProps) {
   const router = useRouter();
   const { signIn, loading } = useAuth();
@@ -62,7 +64,7 @@ export default function LoginForm({
     }
 
     try {
-      await signIn({ email, password });
+      await signIn({ email, password }, requiredRole);
       toast.success("Đăng nhập thành công!");
       router.push(redirectPath);
     } catch (err) {
@@ -179,7 +181,11 @@ export default function LoginForm({
           <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
         </label>
         <Link
-          href="#"
+          href={
+            redirectPath?.includes("/admin")
+              ? "/admin/forgot-password"
+              : "/seller/forgot-password"
+          }
           className="text-sm text-orange-500 hover:text-orange-600 font-medium"
         >
           Quên mật khẩu?

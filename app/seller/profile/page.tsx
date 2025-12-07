@@ -2,11 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  PersonalInfo,
-  StoreInfo,
-  BusinessHours,
-} from "./components/ProfileInfo";
+import { PersonalInfo, StoreInfo } from "./components";
 import { SettingsSection } from "./components/SettingsSection";
 import { User, Store } from "@/lib/mockData/profile";
 import { profileService, SellerProfile } from "@/lib/services/profileService";
@@ -127,7 +123,7 @@ export default function ProfilePage() {
     [profile, resolveAvatar]
   );
 
-  // Store update handler
+  // Store update handler (includes business hours)
   const handleStoreUpdate = useCallback(
     async (storeData: Partial<Store>) => {
       if (!profile?.store.id) return;
@@ -143,29 +139,6 @@ export default function ProfilePage() {
         toast.success("Store information updated successfully");
       } catch {
         toast.error("Error updating store information");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [profile?.store.id]
-  );
-
-  // Open time update handler
-  const handleBusinessHoursUpdate = useCallback(
-    async (openTime: string, closeTime: string) => {
-      if (!profile?.store.id) return;
-      setLoading(true);
-      try {
-        const updatedStore = await profileService.updateStore(
-          profile.store.id,
-          { open_time: openTime, close_time: closeTime }
-        );
-        setProfile((prev) =>
-          prev ? { ...prev, store: { ...prev.store, ...updatedStore } } : prev
-        );
-        toast.success("Open time updated successfully");
-      } catch {
-        toast.error("Error updating open time");
       } finally {
         setLoading(false);
       }
@@ -327,12 +300,6 @@ export default function ProfilePage() {
               store={profile.store}
               onUpdate={handleStoreUpdate}
               onUploadImage={handleStoreImageUpload}
-              loading={loading}
-            />
-            <BusinessHours
-              openTime={profile.store.open_time}
-              closeTime={profile.store.close_time}
-              onUpdate={handleBusinessHoursUpdate}
               loading={loading}
             />
           </TabsContent>

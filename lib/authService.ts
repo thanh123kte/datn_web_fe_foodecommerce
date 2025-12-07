@@ -66,7 +66,10 @@ class AuthService {
   }
 
   // Đăng nhập bằng email và password
-  async signIn({ email, password }: SignInData): Promise<UserCredential> {
+  async signIn(
+    { email, password }: SignInData,
+    requiredRole: "ADMIN" | "SELLER" = "SELLER"
+  ): Promise<UserCredential> {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
 
@@ -74,7 +77,10 @@ class AuthService {
       const idToken = await result.user.getIdToken();
 
       // Call backend login endpoint to get user info and JWT token
-      const loginResponse = await authApiService.firebaseLogin(idToken);
+      const loginResponse = await authApiService.firebaseLogin(
+        idToken,
+        requiredRole
+      );
 
       // Save user session data to localStorage
       authApiService.saveUserSession(loginResponse);

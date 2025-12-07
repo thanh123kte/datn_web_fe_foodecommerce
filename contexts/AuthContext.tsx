@@ -19,7 +19,10 @@ interface AuthContextType {
   loading: boolean;
   currentStore: Store | null;
   userRole: string | null;
-  signIn: (data: SignInData) => Promise<void>;
+  signIn: (
+    data: SignInData,
+    requiredRole?: "ADMIN" | "SELLER"
+  ) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signUp: (data: SignUpData) => Promise<void>;
   signOut: () => Promise<void>;
@@ -106,10 +109,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [loadUserInfo]);
 
-  const signIn = async (data: SignInData) => {
+  const signIn = async (
+    data: SignInData,
+    requiredRole: "ADMIN" | "SELLER" = "SELLER"
+  ) => {
     try {
       setLoading(true);
-      await authService.signIn(data);
+      await authService.signIn(data, requiredRole);
     } catch (error) {
       throw error;
     } finally {

@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, AlertTriangle } from "lucide-react";
 import { StoreCategory } from "@/lib/services/storeCategoryService";
+import { Category } from "@/types/category";
 
 interface DeleteCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  category: StoreCategory | null;
+  category: StoreCategory | Category | null;
   isLoading?: boolean;
 }
 
@@ -21,6 +22,21 @@ export default function DeleteCategoryModal({
   isLoading = false,
 }: DeleteCategoryModalProps) {
   if (!isOpen || !category) return null;
+
+  // Get products count safely - handle both types
+  const productsCount: number = (() => {
+    if ("productsCount" in category) {
+      return typeof category.productsCount === "number"
+        ? category.productsCount
+        : 0;
+    }
+    if ("products_count" in category) {
+      return typeof category.products_count === "number"
+        ? category.products_count
+        : 0;
+    }
+    return 0;
+  })();
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -53,16 +69,15 @@ export default function DeleteCategoryModal({
               <strong>&quot;{category.name}&quot;</strong>?
             </p>
 
-            {category.productsCount > 0 && (
+            {productsCount > 0 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-2 text-yellow-800">
                   <AlertTriangle className="w-5 h-5" />
                   <span className="font-medium">Warning</span>
                 </div>
                 <p className="text-yellow-700 text-sm mt-2">
-                  This category has{" "}
-                  <strong>{category.productsCount} products</strong>. Deleting
-                  this category will affect these products.
+                  This category has <strong>{productsCount} products</strong>.
+                  Deleting this category will affect these products.
                 </p>
               </div>
             )}

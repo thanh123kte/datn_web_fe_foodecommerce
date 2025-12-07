@@ -65,7 +65,7 @@ export default function MainLayout({
         <main
           className={`flex-1 transition-all duration-300 overflow-y-auto ${className}`}
         >
-          <div className="min-h-full">{children}</div>
+          <div className="min-h-full p-6 lg:p-8">{children}</div>
         </main>
       </div>
     </div>

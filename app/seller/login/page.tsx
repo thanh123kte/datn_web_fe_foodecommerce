@@ -2,8 +2,27 @@
 
 import { AuthLayout, LoginForm, GoogleLoginButton } from "@/components/auth";
 import TestAccountsInfo from "@/components/dev/TestAccountsInfo";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
 export default function SellerLogin() {
+  // Kiểm tra phiên đăng nhập - tự động redirect nếu đã đăng nhập
+  const { isChecking } = useAuthRedirect({
+    requiredRole: "SELLER",
+    redirectTo: "/seller/dashboard",
+  });
+
+  // Hiển thị loading trong khi kiểm tra phiên đăng nhập
+  if (isChecking) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-orange-50 to-orange-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang kiểm tra phiên đăng nhập...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AuthLayout
       title="Đăng nhập Seller"
@@ -31,10 +50,7 @@ export default function SellerLogin() {
         <LoginForm
           submitButtonText="Đăng nhập Seller"
           redirectPath="/seller/dashboard"
-          signupLink={{
-            text: "Đăng ký bán hàng",
-            href: "/seller/register",
-          }}
+          requiredRole="SELLER"
         />
 
         {/* Divider */}
@@ -52,8 +68,6 @@ export default function SellerLogin() {
         {/* Google Login */}
         <GoogleLoginButton redirectPath="/seller/dashboard" />
       </div>
-
-      <TestAccountsInfo />
     </AuthLayout>
   );
 }
