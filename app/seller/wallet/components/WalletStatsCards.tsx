@@ -1,7 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { WalletStats, formatCurrency } from "@/lib/mockData/wallet";
+import { WalletResponseDto } from "@/lib/services/walletService";
 import {
   Wallet,
   TrendingUp,
@@ -14,8 +14,17 @@ import {
   Activity,
 } from "lucide-react";
 
+// Utility function to format currency (Vietnamese Dong)
+const formatCurrency = (amount: string | number): string => {
+  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(numAmount);
+};
+
 interface WalletStatsCardsProps {
-  stats: WalletStats;
+  wallet: WalletResponseDto | null;
   loading?: boolean;
 }
 
@@ -92,114 +101,62 @@ const StatCard: React.FC<StatCardProps> = ({
 };
 
 export const WalletStatsCards: React.FC<WalletStatsCardsProps> = ({
-  stats,
+  wallet,
   loading = false,
 }) => {
-  // Calculate trend percentages (mock calculation)
-  const monthlyGrowth = (
-    (stats.monthly_earnings / (stats.total_earned - stats.monthly_earnings)) *
-    100
-  ).toFixed(1);
-  const weeklyGrowth = (
-    (stats.weekly_earnings / stats.monthly_earnings) *
-    100 *
-    4.3
-  ).toFixed(1);
+  // If wallet data is not available, show loading state
+  if (!wallet) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-8 animate-pulse">
+          <div className="h-24 bg-gray-200 rounded"></div>
+        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-6 animate-pulse">
+              <div className="h-20 bg-gray-200 rounded"></div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // TODO: Trend percentages and time-based stats (monthly/weekly) are not available from backend
+  // These would require historical data analysis or additional backend endpoints
+  // Current implementation shows static trend values for UI consistency
 
   const statCards: StatCardProps[] = [
     {
-      title: "Số dư hiện tại",
-      value: stats.current_balance,
-      subtitle: "Số tiền có thể rút",
-      icon: <Wallet className="h-5 w-5 text-blue-600" />,
-      colorClass: "bg-blue-100",
-      trend: {
-        value: "+12.5%",
-        isPositive: true,
-      },
-      isLoading: loading,
-    },
-    {
       title: "Tổng thu nhập",
-      value: stats.total_earned,
+      value: wallet.totalEarned,
       subtitle: "Từ tất cả đơn hàng",
       icon: <DollarSign className="h-5 w-5 text-green-600" />,
       colorClass: "bg-green-100",
-      trend: {
-        value: `+${monthlyGrowth}%`,
-        isPositive: true,
-      },
       isLoading: loading,
     },
     {
-      title: "Thu nhập tháng này",
-      value: stats.monthly_earnings,
-      subtitle: `Từ ${new Date().toLocaleDateString("vi-VN", {
-        month: "long",
-        year: "numeric",
-      })}`,
-      icon: <TrendingUp className="h-5 w-5 text-purple-600" />,
-      colorClass: "bg-purple-100",
-      trend: {
-        value: `+${weeklyGrowth}%`,
-        isPositive: parseFloat(weeklyGrowth) > 0,
-      },
-      isLoading: loading,
-    },
-    {
-      title: "Thu nhập tuần này",
-      value: stats.weekly_earnings,
-      subtitle: "7 ngày qua",
-      icon: <Activity className="h-5 w-5 text-orange-600" />,
-      colorClass: "bg-orange-100",
-      trend: {
-        value: "+8.2%",
-        isPositive: true,
-      },
+      title: "Tổng đã nạp",
+      value: wallet.totalDeposited,
+      subtitle: "Đã nạp vào ví",
+      icon: <ArrowUpCircle className="h-5 w-5 text-blue-600" />,
+      colorClass: "bg-blue-100",
       isLoading: loading,
     },
     {
       title: "Tổng đã rút",
-      value: stats.total_withdrawn,
+      value: wallet.totalWithdrawn,
       subtitle: "Đã chuyển về ngân hàng",
       icon: <ArrowDownCircle className="h-5 w-5 text-red-600" />,
       colorClass: "bg-red-100",
-      trend: {
-        value: "+5.3%",
-        isPositive: false,
-      },
       isLoading: loading,
     },
     {
-      title: "Đang chờ rút",
-      value: stats.pending_withdrawals,
-      subtitle: "Đang xử lý",
-      icon: <Clock className="h-5 w-5 text-yellow-600" />,
-      colorClass: "bg-yellow-100",
-      isLoading: loading,
-    },
-    {
-      title: "Tổng hoàn tiền",
-      value: stats.total_refunded,
-      subtitle: "Đã hoàn lại khách hàng",
-      icon: <ArrowUpCircle className="h-5 w-5 text-indigo-600" />,
-      colorClass: "bg-indigo-100",
-      trend: {
-        value: "-2.1%",
-        isPositive: true, // Lower refunds is better
-      },
-      isLoading: loading,
-    },
-    {
-      title: "Tổng giao dịch",
-      value: stats.total_transactions.toLocaleString("vi-VN"),
-      subtitle: `${stats.recent_transaction_count} giao dịch gần đây`,
-      icon: <CreditCard className="h-5 w-5 text-teal-600" />,
-      colorClass: "bg-teal-100",
-      trend: {
-        value: "+15.4%",
-        isPositive: true,
-      },
+      title: "Số dư khả dụng",
+      value: wallet.balance,
+      subtitle: "Có thể rút ngay",
+      icon: <Wallet className="h-5 w-5 text-purple-600" />,
+      colorClass: "bg-purple-100",
       isLoading: loading,
     },
   ];
@@ -218,39 +175,30 @@ export const WalletStatsCards: React.FC<WalletStatsCardsProps> = ({
                 {loading ? (
                   <div className="w-48 h-10 bg-white/20 rounded animate-pulse"></div>
                 ) : (
-                  formatCurrency(stats.current_balance)
+                  formatCurrency(wallet.balance)
                 )}
               </h2>
               <p className="text-blue-100 text-sm">
-                Có thể rút:{" "}
+                Thay đổi lần cuối:{" "}
                 {loading
                   ? "---"
-                  : formatCurrency(
-                      stats.current_balance - stats.pending_withdrawals
-                    )}
+                  : new Date(wallet.updatedAt).toLocaleDateString("vi-VN", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
               </p>
             </div>
             <div className="text-right">
               <div className="p-4 bg-white/20 rounded-xl">
                 <Wallet className="h-8 w-8" />
               </div>
-              <div className="mt-4 space-y-1">
-                <p className="text-sm text-blue-100">Tăng trưởng tháng này</p>
-                <div className="flex items-center gap-1 text-green-300">
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="font-semibold">+12.5%</span>
-                </div>
-              </div>
+              {/* TODO: Growth stats not available from backend - requires historical data analysis */}
             </div>
           </div>
         </Card>
-      </div>
-
-      {/* Statistics Grid */}
-      <div className="col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((card, index) => (
-          <StatCard key={index} {...card} />
-        ))}
       </div>
 
       {/* Quick Summary */}
@@ -260,58 +208,45 @@ export const WalletStatsCards: React.FC<WalletStatsCardsProps> = ({
             Tóm tắt tài chính
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Earning Summary */}
+            {/* Total Earned */}
             <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg">
               <div className="p-2 bg-green-100 rounded-lg">
                 <TrendingUp className="h-5 w-5 text-green-600" />
               </div>
               <div>
                 <p className="text-sm text-green-600 font-medium">
-                  Thu nhập trung bình/ngày
+                  Tổng thu nhập
                 </p>
                 <p className="text-lg font-bold text-green-700">
-                  {loading
-                    ? "---"
-                    : formatCurrency(Math.round(stats.monthly_earnings / 30))}
+                  {loading ? "---" : formatCurrency(wallet.totalEarned)}
                 </p>
               </div>
             </div>
 
-            {/* Transaction Summary */}
+            {/* Total Deposited */}
             <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Activity className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-blue-600 font-medium">
-                  Giao dịch trung bình/tháng
-                </p>
+                <p className="text-sm text-blue-600 font-medium">Tổng đã nạp</p>
                 <p className="text-lg font-bold text-blue-700">
-                  {loading
-                    ? "---"
-                    : Math.round(stats.total_transactions / 11).toLocaleString(
-                        "vi-VN"
-                      )}
+                  {loading ? "---" : formatCurrency(wallet.totalDeposited)}
                 </p>
               </div>
             </div>
 
-            {/* Withdrawal Summary */}
+            {/* Total Withdrawn */}
             <div className="flex items-center gap-4 p-4 bg-orange-50 rounded-lg">
               <div className="p-2 bg-orange-100 rounded-lg">
                 <ArrowDownCircle className="h-5 w-5 text-orange-600" />
               </div>
               <div>
                 <p className="text-sm text-orange-600 font-medium">
-                  Tỷ lệ rút tiền
+                  Tổng đã rút
                 </p>
                 <p className="text-lg font-bold text-orange-700">
-                  {loading
-                    ? "---"
-                    : `${(
-                        (stats.total_withdrawn / stats.total_earned) *
-                        100
-                      ).toFixed(1)}%`}
+                  {loading ? "---" : formatCurrency(wallet.totalWithdrawn)}
                 </p>
               </div>
             </div>

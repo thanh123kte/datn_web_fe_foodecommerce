@@ -5,16 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  WalletTransaction,
+  WalletTransactionResponseDto,
   TransactionType,
-  PaymentStatus,
-  formatCurrency,
-  getTransactionTypeLabel,
-  getTransactionTypeColor,
-  getPaymentStatusColor,
-  isPositiveTransaction,
-  isNegativeTransaction,
-} from "@/lib/mockData/wallet";
+} from "@/lib/services/walletService";
 import {
   ArrowUpCircle,
   ArrowDownCircle,
@@ -28,42 +21,78 @@ import {
   XCircle,
 } from "lucide-react";
 
+// Utility functions
+const formatCurrency = (amount: string | number): string => {
+  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(numAmount);
+};
+
+const getTransactionTypeLabel = (type: TransactionType): string => {
+  switch (type) {
+    case TransactionType.DEPOSIT:
+      return "Nạp tiền";
+    case TransactionType.WITHDRAW:
+      return "Rút tiền";
+    case TransactionType.EARN:
+      return "Thu nhập";
+    case TransactionType.REFUND:
+      return "Hoàn tiền";
+    case TransactionType.PAYMENT:
+      return "Thanh toán";
+    default:
+      return type;
+  }
+};
+
+const getTransactionTypeColor = (type: TransactionType): string => {
+  switch (type) {
+    case TransactionType.DEPOSIT:
+      return "text-blue-600 bg-blue-100";
+    case TransactionType.WITHDRAW:
+      return "text-orange-600 bg-orange-100";
+    case TransactionType.EARN:
+      return "text-green-600 bg-green-100";
+    case TransactionType.REFUND:
+      return "text-red-600 bg-red-100";
+    case TransactionType.PAYMENT:
+      return "text-purple-600 bg-purple-100";
+    default:
+      return "text-gray-600 bg-gray-100";
+  }
+};
+
+const isPositiveTransaction = (type: TransactionType): boolean => {
+  return [TransactionType.DEPOSIT, TransactionType.EARN].includes(type);
+};
+
 interface TransactionListProps {
-  transactions: WalletTransaction[];
+  transactions: WalletTransactionResponseDto[];
   loading?: boolean;
-  onViewDetails?: (transaction: WalletTransaction) => void;
+  onViewDetails?: (transaction: WalletTransactionResponseDto) => void;
   showPagination?: boolean;
-  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  currentPage?: number;
+  totalPages?: number;
 }
 
 interface TransactionItemProps {
-  transaction: WalletTransaction;
-  onViewDetails?: (transaction: WalletTransaction) => void;
-}
-
-interface TransactionFiltersProps {
-  onFilterChange: (filters: TransactionFilters) => void;
-  loading?: boolean;
+  transaction: WalletTransactionResponseDto;
+  onViewDetails?: (transaction: WalletTransactionResponseDto) => void;
 }
 
 export interface TransactionFilters {
   type?: TransactionType | "ALL";
-  status?: PaymentStatus | "ALL";
-  dateRange?: {
-    start: string;
-    end: string;
-  };
 }
 
 const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   onViewDetails,
 }) => {
-  const isPositive = isPositiveTransaction(transaction.transaction_type);
-  const typeColor = getTransactionTypeColor(transaction.transaction_type);
-  const statusColor = getPaymentStatusColor(
-    transaction.status || PaymentStatus.SUCCESS
-  );
+  const isPositive = isPositiveTransaction(transaction.transactionType);
+  const typeColor = getTransactionTypeColor(transaction.transactionType);
 
   const getTransactionIcon = (type: TransactionType) => {
     switch (type) {
@@ -96,24 +125,18 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
         <div className="flex items-center gap-4">
           {/* Icon */}
           <div className="p-2 bg-gray-50 rounded-lg">
-            {getTransactionIcon(transaction.transaction_type)}
+            {getTransactionIcon(transaction.transactionType)}
           </div>
 
           {/* Details */}
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <h4 className="font-medium text-gray-900">
-                {getTransactionTypeLabel(transaction.transaction_type)}
+                {getTransactionTypeLabel(transaction.transactionType)}
               </h4>
               <Badge className={`text-xs ${typeColor}`}>
-                {transaction.transaction_type}
+                {transaction.transactionType}
               </Badge>
-              {transaction.status &&
-                transaction.status !== PaymentStatus.SUCCESS && (
-                  <Badge className={`text-xs ${statusColor}`}>
-                    {transaction.status}
-                  </Badge>
-                )}
             </div>
             <p className="text-sm text-gray-600 max-w-md">
               {transaction.description}
@@ -123,20 +146,20 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {formatDate(transaction.created_at)}
+                {formatDate(transaction.createdAt)}
               </div>
-              {transaction.order_id && (
+              {transaction.referenceId && (
                 <div className="flex items-center gap-1">
                   <Hash className="h-3 w-3" />
-                  {transaction.order_id}
+                  {transaction.referenceType}: {transaction.referenceId}
                 </div>
               )}
-              {transaction.customer_name && (
-                <div className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  {transaction.customer_name}
-                </div>
-              )}
+            </div>
+
+            {/* Balance information */}
+            <div className="text-xs text-gray-500">
+              Số dư trước: {formatCurrency(transaction.balanceBefore)} → Sau:{" "}
+              {formatCurrency(transaction.balanceAfter)}
             </div>
           </div>
         </div>
@@ -151,28 +174,14 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
               }`}
             >
               {isPositive ? "+" : "-"}
-              {formatCurrency(Math.abs(transaction.amount))}
+              {formatCurrency(
+                Math.abs(
+                  typeof transaction.amount === "string"
+                    ? parseFloat(transaction.amount)
+                    : transaction.amount
+                )
+              )}
             </p>
-
-            {/* Status indicator */}
-            {transaction.status && (
-              <div className="flex items-center justify-end gap-1 mt-1">
-                {transaction.status === PaymentStatus.SUCCESS ? (
-                  <CheckCircle className="h-3 w-3 text-green-500" />
-                ) : transaction.status === PaymentStatus.PENDING ? (
-                  <Clock className="h-3 w-3 text-yellow-500" />
-                ) : (
-                  <XCircle className="h-3 w-3 text-red-500" />
-                )}
-                <span className="text-xs text-gray-500">
-                  {transaction.status === PaymentStatus.SUCCESS
-                    ? "Thành công"
-                    : transaction.status === PaymentStatus.PENDING
-                    ? "Đang xử lý"
-                    : "Thất bại"}
-                </span>
-              </div>
-            )}
           </div>
 
           {/* Actions */}
@@ -193,19 +202,23 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   );
 };
 
-const TransactionFilters: React.FC<TransactionFiltersProps> = ({
+// Simple transaction type filter component
+interface SimpleTransactionFiltersProps {
+  onFilterChange: (type: TransactionType | "ALL") => void;
+  loading?: boolean;
+}
+
+const SimpleTransactionFilters: React.FC<SimpleTransactionFiltersProps> = ({
   onFilterChange,
   loading = false,
 }) => {
-  const [filters, setFilters] = useState<TransactionFilters>({
-    type: "ALL",
-    status: "ALL",
-  });
+  const [selectedType, setSelectedType] = useState<TransactionType | "ALL">(
+    "ALL"
+  );
 
-  const handleFilterChange = (newFilters: Partial<TransactionFilters>) => {
-    const updatedFilters = { ...filters, ...newFilters };
-    setFilters(updatedFilters);
-    onFilterChange(updatedFilters);
+  const handleChange = (type: TransactionType | "ALL") => {
+    setSelectedType(type);
+    onFilterChange(type);
   };
 
   return (
@@ -214,17 +227,14 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-gray-400" />
           <span className="text-sm font-medium text-gray-700">
-            Lọc giao dịch:
+            Lọc theo loại:
           </span>
         </div>
 
-        {/* Transaction Type Filter */}
         <select
-          value={filters.type}
+          value={selectedType}
           onChange={(e) =>
-            handleFilterChange({
-              type: e.target.value as TransactionType | "ALL",
-            })
+            handleChange(e.target.value as TransactionType | "ALL")
           }
           disabled={loading}
           className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
@@ -237,55 +247,7 @@ const TransactionFilters: React.FC<TransactionFiltersProps> = ({
           <option value={TransactionType.PAYMENT}>Thanh toán</option>
         </select>
 
-        {/* Status Filter */}
-        <select
-          value={filters.status}
-          onChange={(e) =>
-            handleFilterChange({
-              status: e.target.value as PaymentStatus | "ALL",
-            })
-          }
-          disabled={loading}
-          className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-        >
-          <option value="ALL">Tất cả trạng thái</option>
-          <option value={PaymentStatus.SUCCESS}>Thành công</option>
-          <option value={PaymentStatus.PENDING}>Đang xử lý</option>
-          <option value={PaymentStatus.FAILED}>Thất bại</option>
-        </select>
-
-        {/* Date Range */}
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            onChange={(e) =>
-              handleFilterChange({
-                dateRange: {
-                  start: e.target.value,
-                  end: filters.dateRange?.end || "",
-                },
-              })
-            }
-            disabled={loading}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-            placeholder="Từ ngày"
-          />
-          <span className="text-gray-400">đến</span>
-          <input
-            type="date"
-            onChange={(e) =>
-              handleFilterChange({
-                dateRange: {
-                  start: filters.dateRange?.start || "",
-                  end: e.target.value,
-                },
-              })
-            }
-            disabled={loading}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-            placeholder="Đến ngày"
-          />
-        </div>
+        {/* TODO: Date range filtering not implemented in backend API */}
       </div>
     </Card>
   );
@@ -296,63 +258,30 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   loading = false,
   onViewDetails,
   showPagination = false,
-  pageSize = 10,
+  onPageChange,
+  currentPage = 0,
+  totalPages = 1,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState<TransactionFilters>({});
+  const [typeFilter, setTypeFilter] = useState<TransactionType | "ALL">("ALL");
 
-  // Apply filters
-  const filteredTransactions = transactions.filter((transaction) => {
-    if (
-      filters.type &&
-      filters.type !== "ALL" &&
-      transaction.transaction_type !== filters.type
-    ) {
-      return false;
-    }
-    if (
-      filters.status &&
-      filters.status !== "ALL" &&
-      transaction.status !== filters.status
-    ) {
-      return false;
-    }
-    if (filters.dateRange) {
-      const transactionDate = new Date(transaction.created_at);
-      if (
-        filters.dateRange.start &&
-        transactionDate < new Date(filters.dateRange.start)
-      ) {
-        return false;
-      }
-      if (
-        filters.dateRange.end &&
-        transactionDate > new Date(filters.dateRange.end)
-      ) {
-        return false;
-      }
-    }
-    return true;
-  });
+  // Apply client-side type filter (server already handles pagination)
+  const filteredTransactions =
+    typeFilter === "ALL"
+      ? transactions
+      : transactions.filter(
+          (transaction) => transaction.transactionType === typeFilter
+        );
 
-  // Pagination
-  const totalPages = Math.ceil(filteredTransactions.length / pageSize);
-  const paginatedTransactions = showPagination
-    ? filteredTransactions.slice(
-        (currentPage - 1) * pageSize,
-        currentPage * pageSize
-      )
-    : filteredTransactions;
-
-  const handleFilterChange = (newFilters: TransactionFilters) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
+  const handleFilterChange = (type: TransactionType | "ALL") => {
+    setTypeFilter(type);
+    // Note: In a real implementation, this should trigger a new API call with the filter
+    // For now, we filter client-side from the already loaded page
   };
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <TransactionFilters
+        <SimpleTransactionFilters
           onFilterChange={handleFilterChange}
           loading={true}
         />
@@ -383,54 +312,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <TransactionFilters onFilterChange={handleFilterChange} />
-
-      {/* Transaction Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-2">
-            <ArrowUpCircle className="h-5 w-5 text-green-600" />
-            <div>
-              <p className="text-sm text-gray-600">Thu nhập</p>
-              <p className="text-lg font-semibold text-green-600">
-                {formatCurrency(
-                  filteredTransactions
-                    .filter((t) => isPositiveTransaction(t.transaction_type))
-                    .reduce((sum, t) => sum + t.amount, 0)
-                )}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center gap-2">
-            <ArrowDownCircle className="h-5 w-5 text-red-600" />
-            <div>
-              <p className="text-sm text-gray-600">Chi phí</p>
-              <p className="text-lg font-semibold text-red-600">
-                {formatCurrency(
-                  filteredTransactions
-                    .filter((t) => isNegativeTransaction(t.transaction_type))
-                    .reduce((sum, t) => sum + t.amount, 0)
-                )}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center gap-2">
-            <Hash className="h-5 w-5 text-blue-600" />
-            <div>
-              <p className="text-sm text-gray-600">Số giao dịch</p>
-              <p className="text-lg font-semibold text-blue-600">
-                {filteredTransactions.length.toLocaleString("vi-VN")}
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <SimpleTransactionFilters onFilterChange={handleFilterChange} />
 
       {/* Transaction List */}
       <div className="space-y-4">
@@ -440,9 +322,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           </h3>
         </div>
 
-        {paginatedTransactions.length > 0 ? (
+        {filteredTransactions.length > 0 ? (
           <div className="space-y-4">
-            {paginatedTransactions.map((transaction) => (
+            {filteredTransactions.map((transaction) => (
               <TransactionItem
                 key={transaction.id}
                 transaction={transaction}
@@ -461,31 +343,29 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         )}
 
         {/* Pagination */}
-        {showPagination && totalPages > 1 && (
+        {showPagination && totalPages > 1 && onPageChange && (
           <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-600">
-              Hiển thị {paginatedTransactions.length} trong số{" "}
-              {filteredTransactions.length} giao dịch
+              Hiển thị {filteredTransactions.length} giao dịch (Trang{" "}
+              {currentPage + 1})
             </p>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                disabled={currentPage <= 1}
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage <= 0}
+                onClick={() => onPageChange(currentPage - 1)}
               >
                 Trước
               </Button>
               <span className="text-sm text-gray-600">
-                Trang {currentPage} / {totalPages}
+                Trang {currentPage + 1} / {totalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={currentPage >= totalPages}
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                }
+                disabled={currentPage >= totalPages - 1}
+                onClick={() => onPageChange(currentPage + 1)}
               >
                 Sau
               </Button>

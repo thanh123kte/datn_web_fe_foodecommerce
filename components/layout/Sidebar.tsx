@@ -103,6 +103,12 @@ const navigationItems: NavItem[] = [
     roles: ["admin"],
   },
   {
+    title: "Wallet",
+    href: "/admin/wallet",
+    icon: Wallet,
+    roles: ["admin"],
+  },
+  {
     title: "Promotions",
     href: "/admin/promotions/banners",
     icon: Gift,

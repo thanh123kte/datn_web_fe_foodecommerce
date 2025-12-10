@@ -30,14 +30,14 @@ export enum PaymentStatus {
 export interface Wallet {
   id: string;
   user_id: string;
-  balance: number;
+  balance: string;
   updated_at: string;
 }
 
 export interface WalletTransaction {
   id: string;
   wallet_id: string;
-  amount: number;
+  amount: string;
   transaction_type: TransactionType;
   description: string;
   created_at: string;
@@ -48,13 +48,13 @@ export interface WalletTransaction {
 }
 
 export interface WalletStats {
-  current_balance: number;
-  total_earned: number;
-  total_withdrawn: number;
-  total_refunded: number;
-  pending_withdrawals: number;
-  monthly_earnings: number;
-  weekly_earnings: number;
+  current_balance: string;
+  total_earned: string;
+  total_withdrawn: string;
+  total_refunded: string;
+  pending_withdrawals: string;
+  monthly_earnings: string;
+  weekly_earnings: string;
   total_transactions: number;
   recent_transaction_count: number;
 }
@@ -62,22 +62,22 @@ export interface WalletStats {
 export interface MonthlyEarning {
   month: string;
   year: number;
-  total_earnings: number;
+  total_earnings: string;
   total_orders: number;
-  average_order_value: number;
+  average_order_value: string;
 }
 
 export interface DailyEarning {
   date: string;
-  earnings: number;
+  earnings: string;
   orders: number;
-  refunds: number;
+  refunds: string;
 }
 
 export interface WithdrawalRequest {
   id: string;
   wallet_id: string;
-  amount: number;
+  amount: string;
   bank_account: string;
   bank_name: string;
   account_holder: string;
@@ -91,11 +91,12 @@ export interface WithdrawalRequest {
 // UTILITY FUNCTIONS
 ////////////////////////////////////////////////////
 
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (amount: string | number): string => {
+  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
-  }).format(amount);
+  }).format(numAmount);
 };
 
 export const getTransactionTypeLabel = (type: TransactionType): string => {
@@ -165,19 +166,19 @@ export const isNegativeTransaction = (type: TransactionType): boolean => {
 export const mockWallet: Wallet = {
   id: "wallet_001",
   user_id: "seller_001",
-  balance: 15750000, // 15.75M VND
+  balance: "15750000", // 15.75M VND
   updated_at: "2024-11-27T10:30:00Z",
 };
 
 // Mock wallet statistics
 export const mockWalletStats: WalletStats = {
-  current_balance: 15750000,
-  total_earned: 45230000,
-  total_withdrawn: 25000000,
-  total_refunded: 1480000,
-  pending_withdrawals: 2500000,
-  monthly_earnings: 8750000,
-  weekly_earnings: 2150000,
+  current_balance: "15750000",
+  total_earned: "45230000",
+  total_withdrawn: "25000000",
+  total_refunded: "1480000",
+  pending_withdrawals: "2500000",
+  monthly_earnings: "8750000",
+  weekly_earnings: "2150000",
   total_transactions: 156,
   recent_transaction_count: 24,
 };
@@ -187,7 +188,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_001",
     wallet_id: "wallet_001",
-    amount: 125000,
+    amount: "125000",
     transaction_type: TransactionType.EARN,
     description: "Thu nhập từ đơn hàng #ORD001",
     created_at: "2024-11-27T09:15:00Z",
@@ -198,7 +199,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_002",
     wallet_id: "wallet_001",
-    amount: 2500000,
+    amount: "2500000",
     transaction_type: TransactionType.WITHDRAW,
     description: "Rút tiền về tài khoản ngân hàng Vietcombank",
     created_at: "2024-11-27T08:30:00Z",
@@ -207,7 +208,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_003",
     wallet_id: "wallet_001",
-    amount: 89000,
+    amount: "89000",
     transaction_type: TransactionType.EARN,
     description: "Thu nhập từ đơn hàng #ORD002",
     created_at: "2024-11-26T19:45:00Z",
@@ -218,7 +219,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_004",
     wallet_id: "wallet_001",
-    amount: 45000,
+    amount: "45000",
     transaction_type: TransactionType.REFUND,
     description: "Hoàn tiền đơn hàng bị hủy #ORD003",
     created_at: "2024-11-26T16:20:00Z",
@@ -229,7 +230,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_005",
     wallet_id: "wallet_001",
-    amount: 5000000,
+    amount: "5000000",
     transaction_type: TransactionType.DEPOSIT,
     description: "Nạp tiền từ tài khoản ngân hàng",
     created_at: "2024-11-26T14:10:00Z",
@@ -238,7 +239,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_006",
     wallet_id: "wallet_001",
-    amount: 178000,
+    amount: "178000",
     transaction_type: TransactionType.EARN,
     description: "Thu nhập từ đơn hàng #ORD004",
     created_at: "2024-11-26T12:30:00Z",
@@ -249,7 +250,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_007",
     wallet_id: "wallet_001",
-    amount: 95000,
+    amount: "95000",
     transaction_type: TransactionType.EARN,
     description: "Thu nhập từ đơn hàng #ORD005",
     created_at: "2024-11-25T20:15:00Z",
@@ -260,7 +261,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_008",
     wallet_id: "wallet_001",
-    amount: 1000000,
+    amount: "1000000",
     transaction_type: TransactionType.WITHDRAW,
     description: "Rút tiền về tài khoản ngân hàng BIDV",
     created_at: "2024-11-25T15:45:00Z",
@@ -269,7 +270,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_009",
     wallet_id: "wallet_001",
-    amount: 156000,
+    amount: "156000",
     transaction_type: TransactionType.EARN,
     description: "Thu nhập từ đơn hàng #ORD006",
     created_at: "2024-11-25T11:20:00Z",
@@ -280,7 +281,7 @@ export const mockWalletTransactions: WalletTransaction[] = [
   {
     id: "txn_010",
     wallet_id: "wallet_001",
-    amount: 67000,
+    amount: "67000",
     transaction_type: TransactionType.REFUND,
     description: "Hoàn tiền đơn hàng có vấn đề #ORD007",
     created_at: "2024-11-24T18:10:00Z",
@@ -295,94 +296,94 @@ export const mockMonthlyEarnings: MonthlyEarning[] = [
   {
     month: "Jan",
     year: 2024,
-    total_earnings: 12500000,
+    total_earnings: "12500000",
     total_orders: 145,
-    average_order_value: 86207,
+    average_order_value: "86207",
   },
   {
     month: "Feb",
     year: 2024,
-    total_earnings: 14200000,
+    total_earnings: "14200000",
     total_orders: 167,
-    average_order_value: 85030,
+    average_order_value: "85030",
   },
   {
     month: "Mar",
     year: 2024,
-    total_earnings: 16800000,
+    total_earnings: "16800000",
     total_orders: 189,
-    average_order_value: 88889,
+    average_order_value: "88889",
   },
   {
     month: "Apr",
     year: 2024,
-    total_earnings: 15600000,
+    total_earnings: "15600000",
     total_orders: 178,
-    average_order_value: 87640,
+    average_order_value: "87640",
   },
   {
     month: "May",
     year: 2024,
-    total_earnings: 18900000,
+    total_earnings: "18900000",
     total_orders: 201,
-    average_order_value: 94030,
+    average_order_value: "94030",
   },
   {
     month: "Jun",
     year: 2024,
-    total_earnings: 17300000,
+    total_earnings: "17300000",
     total_orders: 195,
-    average_order_value: 88718,
+    average_order_value: "88718",
   },
   {
     month: "Jul",
     year: 2024,
-    total_earnings: 19450000,
+    total_earnings: "19450000",
     total_orders: 208,
-    average_order_value: 93510,
+    average_order_value: "93510",
   },
   {
     month: "Aug",
     year: 2024,
-    total_earnings: 21200000,
+    total_earnings: "21200000",
     total_orders: 224,
-    average_order_value: 94643,
+    average_order_value: "94643",
   },
   {
     month: "Sep",
     year: 2024,
-    total_earnings: 18750000,
+    total_earnings: "18750000",
     total_orders: 198,
-    average_order_value: 94697,
+    average_order_value: "94697",
   },
   {
     month: "Oct",
     year: 2024,
-    total_earnings: 20100000,
+    total_earnings: "20100000",
     total_orders: 215,
-    average_order_value: 93488,
+    average_order_value: "93488",
   },
   {
     month: "Nov",
     year: 2024,
-    total_earnings: 8750000,
+    total_earnings: "8750000",
     total_orders: 89,
-    average_order_value: 98315,
+    average_order_value: "98315",
   },
 ];
 
 // Mock daily earnings for current month
 export const mockDailyEarnings: DailyEarning[] = [
-  { date: "2024-11-01", earnings: 450000, orders: 5, refunds: 0 },
-  { date: "2024-11-02", earnings: 380000, orders: 4, refunds: 25000 },
-  { date: "2024-11-03", earnings: 620000, orders: 7, refunds: 0 },
-  { date: "2024-11-04", earnings: 295000, orders: 3, refunds: 0 },
-  { date: "2024-11-05", earnings: 520000, orders: 6, refunds: 15000 },
-  { date: "2024-11-06", earnings: 410000, orders: 5, refunds: 0 },
-  { date: "2024-11-07", earnings: 680000, orders: 8, refunds: 30000 },
-  { date: "2024-11-08", earnings: 345000, orders: 4, refunds: 0 },
-  { date: "2024-11-09", earnings: 590000, orders: 6, refunds: 0 },
-  { date: "2024-11-10", earnings: 475000, orders: 5, refunds: 20000 },
+  { date: "2024-11-01", earnings: "450000", orders: 5, refunds: "0" },
+  { date: "2024-11-02", earnings: "380000", orders: 4, refunds: "25000" },
+  { date: "2024-11-03", earnings: "620000", orders: 7, refunds: "0" },
+  { date: "2024-11-04", earnings: "295000", orders: 3, refunds: "0" },
+  { date: "2024-11-05", earnings: "520000", orders: 6, refunds: "15000" },
+  { date: "2024-11-06", earnings: "410000", orders: 5, refunds: "0" },
+  { date: "2024-11-07", earnings: "680000", orders: 8, refunds: "30000" },
+  { date: "2024-11-08", earnings: "345000", orders: 4, refunds: "0" },
+  { date: "2024-11-09", earnings: "590000", orders: 6, refunds: "0" },
+  { date: "2024-11-10", earnings: "475000", orders: 5, refunds: "20000" },
 ];
 
 // Mock withdrawal requests
@@ -390,7 +391,7 @@ export const mockWithdrawalRequests: WithdrawalRequest[] = [
   {
     id: "withdraw_001",
     wallet_id: "wallet_001",
-    amount: 2500000,
+    amount: "2500000",
     bank_account: "1234567890",
     bank_name: "Vietcombank",
     account_holder: "NGUYEN VAN SELLER",
@@ -401,7 +402,7 @@ export const mockWithdrawalRequests: WithdrawalRequest[] = [
   {
     id: "withdraw_002",
     wallet_id: "wallet_001",
-    amount: 1000000,
+    amount: "1000000",
     bank_account: "0987654321",
     bank_name: "BIDV",
     account_holder: "NGUYEN VAN SELLER",
@@ -412,7 +413,7 @@ export const mockWithdrawalRequests: WithdrawalRequest[] = [
   {
     id: "withdraw_003",
     wallet_id: "wallet_001",
-    amount: 3000000,
+    amount: "3000000",
     bank_account: "1122334455",
     bank_name: "Techcombank",
     account_holder: "NGUYEN VAN SELLER",

@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { WalletStatsCards } from "./components/WalletStatsCards";
-import { TransactionList } from "./components/TransactionList";
-import { DepositModal } from "./components/DepositModal";
-import { WithdrawModal } from "./components/WithdrawModal";
+import { WalletStatsCards } from "../../seller/wallet/components/WalletStatsCards";
+import { TransactionList } from "../../seller/wallet/components/TransactionList";
+import { DepositModal } from "../../seller/wallet/components/DepositModal";
+import { WithdrawModal } from "../../seller/wallet/components/WithdrawModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,7 +26,7 @@ import {
   MinusCircle,
 } from "lucide-react";
 
-export default function WalletPage() {
+export default function AdminWalletPage() {
   // State management
   const [wallet, setWallet] = useState<WalletResponseDto | null>(null);
   const [transactions, setTransactions] = useState<
@@ -141,7 +141,7 @@ export default function WalletPage() {
   // Show error if no user ID
   if (!userId) {
     return (
-      <MainLayout userRole="seller">
+      <MainLayout userRole="admin">
         <div className="p-6">
           <Card className="p-8 text-center">
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -156,7 +156,7 @@ export default function WalletPage() {
   }
 
   return (
-    <MainLayout userRole="seller">
+    <>
       <div className="space-y-6 p-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
@@ -358,6 +358,6 @@ export default function WalletPage() {
         onWithdraw={handleWithdraw}
         currentBalance={wallet?.balance || "0"}
       />
-    </MainLayout>
+    </>
   );
 }
