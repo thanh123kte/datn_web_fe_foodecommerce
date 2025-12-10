@@ -26,42 +26,42 @@ export function CategoryStatsComponent({ stats, loading }: CategoryStatsProps) {
 
   const statCards = [
     {
-      title: "Total Categories",
+      title: "Tổng danh mục",
       value: stats.total_categories,
       icon: "📁",
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
-      title: "Active Categories",
+      title: "Danh mục hoạt động",
       value: stats.active_categories,
       icon: "✅",
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
-      title: "Inactive Categories",
+      title: "Danh mục không hoạt động",
       value: stats.inactive_categories,
       icon: "❌",
       color: "text-gray-600",
       bgColor: "bg-gray-50",
     },
     {
-      title: "Total Products",
+      title: "Tổng sản phẩm",
       value: stats.total_products,
       icon: "🍽️",
       color: "text-orange-600",
       bgColor: "bg-orange-50",
     },
     {
-      title: "With Products",
+      title: "Có sản phẩm",
       value: stats.categories_with_products,
       icon: "📊",
       color: "text-purple-600",
       bgColor: "bg-purple-50",
     },
     {
-      title: "Empty Categories",
+      title: "Danh mục trống",
       value: stats.categories_without_products,
       icon: "📭",
       color: "text-red-600",

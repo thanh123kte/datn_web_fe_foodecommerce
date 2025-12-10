@@ -21,36 +21,36 @@ import {
 
 const statsCards = [
   {
-    title: "Total Users",
+    title: "Tổng người dùng",
     value: "2,847",
     change: "+12%",
     trend: "up",
     icon: Users,
-    description: "Active users this month",
+    description: "Người dùng hoạt động tháng này",
   },
   {
-    title: "Total Products",
+    title: "Tổng sản phẩm",
     value: "1,234",
     change: "+8%",
     trend: "up",
     icon: Package,
-    description: "Products in inventory",
+    description: "Sản phẩm trong kho",
   },
   {
-    title: "Total Orders",
+    title: "Tổng đơn hàng",
     value: "5,672",
     change: "+23%",
     trend: "up",
     icon: ShoppingCart,
-    description: "Orders this month",
+    description: "Đơn hàng trong tháng",
   },
   {
-    title: "Revenue",
+    title: "Doanh thu",
     value: "$45,231",
     change: "-3%",
     trend: "down",
     icon: DollarSign,
-    description: "Revenue this month",
+    description: "Doanh thu tháng này",
   },
 ];
 
@@ -59,16 +59,15 @@ export default function AdminDashboard() {
   const displayName = user?.displayName || user?.email || "Admin";
 
   return (
-    
     <div className="space-y-8">
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Admin Dashboard
+          Bảng điều khiển Admin
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Welcome back, {displayName}! Here&apos;s what&apos;s happening with
-          QTI Food today.
+          Chào mừng trở lại, {displayName}! Đây là những gì đang diễn ra với QTI
+          Food hôm nay.
         </p>
       </div>
 
@@ -104,7 +103,7 @@ export default function AdminDashboard() {
                     )}
                     {stat.change}
                   </span>
-                  <span>from last month</span>
+                  <span>từ tháng trước</span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {stat.description}
@@ -122,10 +121,10 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Revenue Overview
+              Tổng quan doanh thu
             </CardTitle>
             <CardDescription>
-              Monthly revenue for the past 6 months
+              Doanh thu hàng tháng trong 6 tháng qua
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -133,7 +132,7 @@ export default function AdminDashboard() {
               <div className="text-center">
                 <BarChart3 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">
-                  Chart component will be implemented here
+                  Biểu đồ sẽ được triển khai ở đây
                 </p>
               </div>
             </div>
@@ -145,10 +144,10 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              User Activity
+              Hoạt động người dùng
             </CardTitle>
             <CardDescription>
-              Daily active users for the past 7 days
+              Người dùng hoạt động hàng ngày trong 7 ngày qua
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -156,7 +155,7 @@ export default function AdminDashboard() {
               <div className="text-center">
                 <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">
-                  Activity chart will be implemented here
+                  Biểu đồ hoạt động sẽ được triển khai ở đây
                 </p>
               </div>
             </div>
@@ -167,34 +166,34 @@ export default function AdminDashboard() {
       {/* Recent Activity */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest activities and notifications</CardDescription>
+          <CardTitle>Hoạt động gần đây</CardTitle>
+          <CardDescription>Các hoạt động và thông báo mới nhất</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {[
               {
-                action: "New user registered",
+                action: "Người dùng mới đăng ký",
                 user: "John Doe",
-                time: "2 minutes ago",
+                time: "2 phút trước",
                 type: "user",
               },
               {
-                action: "Product added to inventory",
+                action: "Thêm sản phẩm vào kho",
                 user: "Admin",
-                time: "5 minutes ago",
+                time: "5 phút trước",
                 type: "product",
               },
               {
-                action: "Order #12345 completed",
-                user: "System",
-                time: "10 minutes ago",
+                action: "Đơn hàng #12345 hoàn thành",
+                user: "Hệ thống",
+                time: "10 phút trước",
                 type: "order",
               },
               {
-                action: "New seller registered",
+                action: "Người bán mới đăng ký",
                 user: "Jane Smith",
-                time: "15 minutes ago",
+                time: "15 phút trước",
                 type: "seller",
               },
             ].map((activity, index) => (
@@ -218,7 +217,7 @@ export default function AdminDashboard() {
                     {activity.action}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    by {activity.user}
+                    bởi {activity.user}
                   </p>
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">

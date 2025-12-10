@@ -16,12 +16,17 @@ import {
   Wallet,
   Star,
   FileBarChart,
+  Store,
+  TicketPercent,
+  Megaphone,
 } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose?: () => void;
   userRole: "admin" | "seller";
+  pendingStoresCount?: number;
+  pendingDriversCount?: number;
 }
 
 interface NavItem {
@@ -30,6 +35,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   roles: ("admin" | "seller")[];
   children?: NavItem[];
+  badge?: number;
 }
 
 const navigationItems: NavItem[] = [
@@ -48,9 +54,23 @@ const navigationItems: NavItem[] = [
   // Admin specific items
   {
     title: "Users",
-    href: "/admin/users",
+    href: "/admin/users/customers",
     icon: Users,
     roles: ["admin"],
+    children: [
+      {
+        title: "Customers",
+        href: "/admin/users/customers",
+        icon: Users,
+        roles: ["admin"],
+      },
+      {
+        title: "Sellers",
+        href: "/admin/users/sellers",
+        icon: Store,
+        roles: ["admin"],
+      },
+    ],
   },
   {
     title: "Drivers",
@@ -84,20 +104,20 @@ const navigationItems: NavItem[] = [
   },
   {
     title: "Promotions",
-    href: "/admin/promotions",
+    href: "/admin/promotions/banners",
     icon: Gift,
     roles: ["admin"],
     children: [
       {
         title: "Banners",
         href: "/admin/promotions/banners",
-        icon: Gift,
+        icon: Megaphone,
         roles: ["admin"],
       },
       {
         title: "Vouchers",
         href: "/admin/promotions/vouchers",
-        icon: Gift,
+        icon: TicketPercent,
         roles: ["admin"],
       },
     ],
@@ -165,13 +185,41 @@ const navigationItems: NavItem[] = [
     icon: Users,
     roles: ["seller"],
   },
-
 ];
 
-export default function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
+export default function Sidebar({
+  isOpen,
+  onClose,
+  userRole,
+  pendingStoresCount = 0,
+  pendingDriversCount = 0,
+}: SidebarProps) {
   const pathname = usePathname();
 
-  const filteredNavItems = navigationItems.filter((item) =>
+  // Update Sellers menu item with pending stores count and Drivers with pending drivers count
+  const navItemsWithBadge = navigationItems.map((item) => {
+    if (
+      item.title === "Users" &&
+      item.roles.includes("admin") &&
+      item.children
+    ) {
+      return {
+        ...item,
+        children: item.children.map((child) => {
+          if (child.title === "Sellers") {
+            return { ...child, badge: pendingStoresCount };
+          }
+          return child;
+        }),
+      };
+    }
+    if (item.title === "Drivers" && item.roles.includes("admin")) {
+      return { ...item, badge: pendingDriversCount };
+    }
+    return item;
+  });
+
+  const filteredNavItems = navItemsWithBadge.filter((item) =>
     item.roles.includes(userRole)
   );
 
@@ -203,6 +251,11 @@ export default function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
         >
           <Icon className={cn("h-5 w-5", level > 0 && "h-4 w-4")} />
           <span>{item.title}</span>
+          {item.badge !== undefined && item.badge > 0 && (
+            <span className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+              {item.badge}
+            </span>
+          )}
         </Link>
 
         {/* Render children if exists */}

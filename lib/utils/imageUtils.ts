@@ -41,6 +41,10 @@ export function resolveMediaUrl(
     normalized = `/uploads/${url}`;
   } else if (url.startsWith("/categories/")) {
     normalized = `/uploads${url}`;
+  } else if (url.startsWith("drivers/")) {
+    normalized = `/uploads/${url}`;
+  } else if (url.startsWith("/drivers/")) {
+    normalized = `/uploads${url}`;
   } else {
     // Default: assume it needs /uploads/ prefix
     normalized = url.startsWith("/") ? `/uploads${url}` : `/uploads/${url}`;
@@ -138,11 +142,15 @@ export function resolveAvatarUrl(
     return url;
   }
 
-  // Fix backend URL that starts with /users/ - should be /uploads/users/
+  // Fix backend URL that starts with /users/ or /drivers/ - should be /uploads/...
   let normalizedUrl = url;
   if (url.startsWith("/users/")) {
     normalizedUrl = `/uploads${url}`;
   } else if (url.startsWith("users/")) {
+    normalizedUrl = `/uploads/${url}`;
+  } else if (url.startsWith("/drivers/")) {
+    normalizedUrl = `/uploads${url}`;
+  } else if (url.startsWith("drivers/")) {
     normalizedUrl = `/uploads/${url}`;
   }
 

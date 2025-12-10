@@ -12,97 +12,7 @@ import {
   VerificationStatus,
   DriverDocument,
 } from "@/types/driver";
-
-// Mock data - replace with real API calls
-const mockStats: DriverStatsType = {
-  total_drivers: 1247,
-  verified_drivers: 892,
-  pending_verification: 156,
-  rejected_drivers: 23,
-  new_drivers_this_month: 45,
-  active_drivers: 869,
-  inactive_drivers: 23,
-};
-
-const mockDrivers: Driver[] = [
-  {
-    id: 1,
-    full_name: "Nguyen Van Duc",
-    phone: "+84901234567",
-    avatar_url: "",
-    vehicle_type: "Honda Wave trắng",
-    vehicle_plate: "59H1-12345",
-    cccd_number: "025987654321",
-    license_number: "B1-123456",
-    verified: true,
-    verification_status: VerificationStatus.APPROVED,
-    created_at: "2024-10-15T08:30:00Z",
-    updated_at: "2024-11-20T14:45:00Z",
-  },
-  {
-    id: 2,
-    full_name: "Tran Thi Mai",
-    phone: "+84907654321",
-    avatar_url: "",
-    vehicle_type: "Xe đạp điện Yamaha",
-    vehicle_plate: "N/A",
-    cccd_number: "025123456789",
-    license_number: "N/A",
-    verified: false,
-    verification_status: VerificationStatus.PENDING,
-    created_at: "2024-11-25T10:15:00Z",
-    updated_at: "2024-11-25T10:15:00Z",
-  },
-  {
-    id: 3,
-    full_name: "Le Van Son",
-    phone: "+84909876543",
-    avatar_url: "",
-    vehicle_type: "Honda SH 150 đen",
-    vehicle_plate: "29X1-98765",
-    cccd_number: "025456789123",
-    license_number: "A1-987654",
-    verified: true,
-    verification_status: VerificationStatus.APPROVED,
-    created_at: "2024-09-20T14:22:00Z",
-    updated_at: "2024-11-28T09:30:00Z",
-  },
-  {
-    id: 4,
-    full_name: "Pham Minh Khai",
-    phone: "+84908765432",
-    avatar_url: "",
-    vehicle_type: "Yamaha Sirius xám",
-    vehicle_plate: "43B1-55667",
-    cccd_number: "025789123456",
-    license_number: "B2-345678",
-    verified: false,
-    verification_status: VerificationStatus.REJECTED,
-    created_at: "2024-11-10T16:45:00Z",
-    updated_at: "2024-11-22T11:20:00Z",
-  },
-];
-
-const mockDocuments: DriverDocument[] = [
-  {
-    id: 1,
-    driver_id: 2,
-    document_type: "cccd",
-    document_url: "/placeholder-cccd.jpg",
-    verified: false,
-    created_at: "2024-11-25T10:20:00Z",
-  },
-  {
-    id: 2,
-    driver_id: 2,
-    document_type: "avatar",
-    document_url: "/placeholder-avatar.jpg",
-    verified: true,
-    verified_at: "2024-11-25T12:00:00Z",
-    verified_by: 1,
-    created_at: "2024-11-25T10:25:00Z",
-  },
-];
+import { driverService } from "@/lib/services/driverService";
 
 export default function DriversPage() {
   const [activeTab, setActiveTab] = useState<"drivers" | "verification">(
@@ -110,12 +20,41 @@ export default function DriversPage() {
   );
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [showDriverModal, setShowDriverModal] = useState(false);
-  const [drivers, setDrivers] = useState<Driver[]>(mockDrivers);
-  const [stats, setStats] = useState<DriverStatsType>(mockStats);
-  const [loading, setLoading] = useState(false);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [stats, setStats] = useState<DriverStatsType>({
+    total_drivers: 0,
+    verified_drivers: 0,
+    pending_verification: 0,
+    rejected_drivers: 0,
+    new_drivers_this_month: 0,
+    active_drivers: 0,
+    inactive_drivers: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   // Filter states
   const [driverFilters, setDriverFilters] = useState<DriverFilters>({});
+
+  // Fetch drivers and stats on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [driversData, statsData] = await Promise.all([
+          driverService.getAllDrivers(),
+          driverService.getDriverStats(),
+        ]);
+        setDrivers(driversData);
+        setStats(statsData);
+      } catch (error) {
+        console.error("Failed to fetch drivers data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Handle driver actions
   const handleDriverClick = (driver: Driver) => {
@@ -128,53 +67,65 @@ export default function DriversPage() {
     action: "approve" | "reject",
     reason?: string
   ) => {
-    setDrivers((prevDrivers) =>
-      prevDrivers.map((driver) => {
-        if (driver.id === driverId) {
-          return {
-            ...driver,
-            verification_status:
-              action === "approve"
-                ? VerificationStatus.APPROVED
-                : VerificationStatus.REJECTED,
-            verified: action === "approve",
-          };
-        }
-        return driver;
-      })
-    );
+    try {
+      const status =
+        action === "approve"
+          ? VerificationStatus.APPROVED
+          : VerificationStatus.REJECTED;
 
-    // Update stats
-    setStats((prevStats) => {
-      if (action === "approve") {
-        return {
-          ...prevStats,
-          verified_drivers: prevStats.verified_drivers + 1,
-          pending_verification: prevStats.pending_verification - 1,
-        };
-      } else {
-        return {
-          ...prevStats,
-          rejected_drivers: prevStats.rejected_drivers + 1,
-          pending_verification: prevStats.pending_verification - 1,
-        };
-      }
-    });
+      // Call API to update verification status
+      const updatedDriver = await driverService.updateVerificationStatus(
+        driverId,
+        status
+      );
 
-    // TODO: Call API to update verification status
-    console.log(
-      `Driver ${driverId} ${action}ed${reason ? ` with reason: ${reason}` : ""}`
-    );
+      // Update local state
+      setDrivers((prevDrivers) =>
+        prevDrivers.map((driver) =>
+          driver.id === driverId ? updatedDriver : driver
+        )
+      );
+
+      // Refresh stats
+      const updatedStats = await driverService.getDriverStats();
+      setStats(updatedStats);
+
+      console.log(
+        `Driver ${driverId} ${action}ed${
+          reason ? ` with reason: ${reason}` : ""
+        }`
+      );
+    } catch (error) {
+      console.error("Failed to update verification status:", error);
+      alert("Không thể cập nhật trạng thái xác minh. Vui lòng thử lại.");
+    }
   };
 
   const handleDriverSave = async (updatedDriver: Driver) => {
-    setDrivers((prevDrivers) =>
-      prevDrivers.map((driver) =>
-        driver.id === updatedDriver.id ? updatedDriver : driver
-      )
-    );
-    // TODO: Call API to save driver changes
-    console.log("Driver updated:", updatedDriver);
+    try {
+      // Call API to update driver
+      const updated = await driverService.updateDriver(updatedDriver.id, {
+        fullName: updatedDriver.full_name,
+        phone: updatedDriver.phone,
+        avatarUrl: updatedDriver.avatar_url,
+        vehicleType: updatedDriver.vehicle_type,
+        vehiclePlate: updatedDriver.vehicle_plate,
+        cccdNumber: updatedDriver.cccd_number,
+        licenseNumber: updatedDriver.license_number,
+      });
+
+      // Update local state
+      setDrivers((prevDrivers) =>
+        prevDrivers.map((driver) =>
+          driver.id === updated.id ? updated : driver
+        )
+      );
+
+      console.log("Driver updated:", updated);
+    } catch (error) {
+      console.error("Failed to update driver:", error);
+      alert("Không thể cập nhật thông tin tài xế. Vui lòng thử lại.");
+    }
   };
 
   // Filter functions
@@ -203,8 +154,9 @@ export default function DriversPage() {
     return true;
   });
 
-  const getDriverDocuments = (driverId: number): DriverDocument[] => {
-    return mockDocuments.filter((doc) => doc.driver_id === driverId);
+  const getDriverDocuments = (): DriverDocument[] => {
+    // TODO: Implement document fetching from API if needed
+    return [];
   };
 
   return (
@@ -232,7 +184,7 @@ export default function DriversPage() {
         }
       >
         <div className="flex border-b border-gray-200">
-                      <button
+          <button
             onClick={() => setActiveTab("verification")}
             className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
               activeTab === "verification"
@@ -258,7 +210,6 @@ export default function DriversPage() {
           >
             All Drivers ({filteredDrivers.length})
           </button>
-
         </div>
 
         {/* Tab Content */}
@@ -296,28 +247,6 @@ export default function DriversPage() {
                   showFilters={false}
                 />
               </div>
-
-              <div>
-                <h3 className="text-lg font-semibold mb-4">
-                  Rejected Drivers (
-                  {
-                    drivers.filter(
-                      (d) =>
-                        d.verification_status === VerificationStatus.REJECTED
-                    ).length
-                  }
-                  )
-                </h3>
-                <DriverTable
-                  drivers={drivers.filter(
-                    (d) => d.verification_status === VerificationStatus.REJECTED
-                  )}
-                  loading={loading}
-                  onDriverClick={handleDriverClick}
-                  onVerificationAction={handleVerificationAction}
-                  showFilters={false}
-                />
-              </div>
             </div>
           )}
         </div>
@@ -333,7 +262,7 @@ export default function DriversPage() {
         }}
         onSave={handleDriverSave}
         onVerificationAction={handleVerificationAction}
-        documents={selectedDriver ? getDriverDocuments(selectedDriver.id) : []}
+        documents={getDriverDocuments()}
       />
     </div>
   );

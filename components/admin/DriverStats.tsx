@@ -41,49 +41,49 @@ export function DriverStats({ stats, loading = false }: DriverStatsProps) {
 
   const statItems = [
     {
-      title: "Total Drivers",
+      title: "Tổng tài xế",
       value: stats.total_drivers.toLocaleString(),
       icon: "👥",
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
-      title: "Verified Drivers",
+      title: "Tài xế đã xác minh",
       value: stats.verified_drivers.toLocaleString(),
       icon: "✅",
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
-      title: "Pending Verification",
+      title: "Chờ xác minh",
       value: stats.pending_verification.toLocaleString(),
       icon: "⏳",
       color: "text-yellow-600",
       bgColor: "bg-yellow-50",
     },
     {
-      title: "Rejected Drivers",
+      title: "Tài xế bị từ chối",
       value: stats.rejected_drivers.toLocaleString(),
       icon: "❌",
       color: "text-red-600",
       bgColor: "bg-red-50",
     },
     {
-      title: "Active Drivers",
+      title: "Tài xế hoạt động",
       value: stats.active_drivers.toLocaleString(),
       icon: "🟢",
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
-      title: "Inactive Drivers",
+      title: "Tài xế không hoạt động",
       value: stats.inactive_drivers.toLocaleString(),
       icon: "⭕",
       color: "text-gray-600",
       bgColor: "bg-gray-50",
     },
     {
-      title: "New Drivers This Month",
+      title: "Tài xế mới tháng này",
       value: stats.new_drivers_this_month.toLocaleString(),
       icon: "🆕",
       color: "text-pink-600",
@@ -95,17 +95,17 @@ export function DriverStats({ stats, loading = false }: DriverStatsProps) {
     <div className="space-y-6 mb-8">
       {/* Quick Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500">
+        <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500 gap-0">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-700">
-                Total Drivers
+                Tổng tài xế
               </h3>
               <p className="text-3xl font-bold text-blue-600 mt-2">
                 {stats.total_drivers.toLocaleString()}
               </p>
               <p className="text-sm text-gray-600 mt-1">
-                {verificationRate}% Verified (
+                {verificationRate}% Đã xác minh (
                 {stats.verified_drivers.toLocaleString()})
               </p>
             </div>
@@ -113,194 +113,40 @@ export function DriverStats({ stats, loading = false }: DriverStatsProps) {
           </div>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-l-green-500">
+        <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-l-green-500 gap-0">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-700">
-                Active Drivers
+                Tài xế hoạt động
               </h3>
               <p className="text-3xl font-bold text-green-600 mt-2">
                 {stats.active_drivers.toLocaleString()}
               </p>
               <p className="text-sm text-gray-600 mt-1">
-                {stats.inactive_drivers.toLocaleString()} inactive drivers
+                {stats.inactive_drivers.toLocaleString()} tài xế không hoạt động
               </p>
             </div>
             <div className="text-4xl">🟢</div>
           </div>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-l-yellow-500">
+        <Card className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-l-yellow-500 gap-0">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-700">
-                Pending Verification
+                Chờ xác minh
               </h3>
               <p className="text-3xl font-bold text-yellow-600 mt-2">
                 {stats.pending_verification.toLocaleString()}
               </p>
               <p className="text-sm text-gray-600 mt-1">
-                {pendingRate}% of all drivers
+                {pendingRate}% tổng tài xế
               </p>
             </div>
             <div className="text-4xl">⏳</div>
           </div>
         </Card>
       </div>
-
-      {/* Detailed Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statItems.map((item, index) => (
-          <Card key={index} className="p-4">
-            <div className="flex items-center space-x-3">
-              <div className={`p-3 rounded-full ${item.bgColor}`}>
-                <span className="text-xl">{item.icon}</span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 font-medium">
-                  {item.title}
-                </p>
-                <p className={`text-2xl font-bold ${item.color}`}>
-                  {item.value}
-                </p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">
-            Verification Status
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Verified Drivers</span>
-              <div className="flex items-center gap-2">
-                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500"
-                    style={{ width: `${verificationRate}%` }}
-                  ></div>
-                </div>
-                <span className="font-semibold text-green-600">
-                  {verificationRate}%
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Pending Verification</span>
-              <div className="flex items-center gap-2">
-                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-yellow-500"
-                    style={{ width: `${pendingRate}%` }}
-                  ></div>
-                </div>
-                <span className="font-semibold text-yellow-600">
-                  {pendingRate}%
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Rejected Drivers</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-red-600">
-                  {stats.rejected_drivers}
-                </span>
-                <span className="text-sm text-gray-500">
-                  ({rejectionRate}%)
-                </span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">
-            Driver Account Status
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Active Drivers</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-green-600">
-                  {stats.active_drivers}
-                </span>
-                <span className="text-sm text-gray-500">verified & active</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Inactive Drivers</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-gray-600">
-                  {stats.inactive_drivers}
-                </span>
-                <span className="text-sm text-gray-500">
-                  suspended/disabled
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Verification Rate</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-blue-600">
-                  {verificationRate}%
-                </span>
-                <span className="text-sm text-gray-500">success rate</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Monthly Growth</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-purple-600">
-                  +{stats.new_drivers_this_month}
-                </span>
-                <span className="text-sm text-gray-500">new drivers</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Growth Overview */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">
-          Account Management Overview
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">
-              +{stats.new_drivers_this_month}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">New Registrations</div>
-            <div className="text-xs text-gray-500">
-              {stats.total_drivers > 0
-                ? Math.round(
-                    (stats.new_drivers_this_month / stats.total_drivers) * 100
-                  )
-                : 0}
-              % growth
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-600">
-              {verificationRate}%
-            </div>
-            <div className="text-sm text-gray-600 mt-1">Verification Rate</div>
-            <div className="text-xs text-gray-500">Account approval rate</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-600">
-              {stats.active_drivers}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">Active Drivers</div>
-            <div className="text-xs text-gray-500">Currently operational</div>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Star,
-  Eye,
+  Image,
   Edit,
   Trash2,
   ShoppingCart,
@@ -14,7 +14,11 @@ import {
   Package,
   TrendingUp,
 } from "lucide-react";
-import { API_BASE_URL, ASSET_BASE_URL, buildAbsoluteUrl } from "@/lib/config/env";
+import {
+  API_BASE_URL,
+  ASSET_BASE_URL,
+  buildAbsoluteUrl,
+} from "@/lib/config/env";
 
 interface ProductCardProps {
   id: string;
@@ -31,6 +35,7 @@ interface ProductCardProps {
   tags: string[];
   categoryName: string;
   onView?: (id: string) => void;
+  onManageImages?: () => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   showActions?: boolean;
@@ -67,6 +72,7 @@ export default function ProductCard({
   isFeature,
   categoryName,
   onView,
+  onManageImages,
   onEdit,
   onDelete,
   showActions = true,
@@ -218,15 +224,22 @@ export default function ProductCard({
         {/* Actions */}
         {showActions && (
           <div className="flex gap-2">
-            {onView && (
+            {(onView || onManageImages) && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onView(id)}
+                onClick={() => {
+                  if (onManageImages) {
+                    onManageImages();
+                  } else if (onView) {
+                    onView(id);
+                  }
+                }}
                 className="flex-1"
+                title={onManageImages ? "Quản lý ảnh" : "Xem chi tiết"}
               >
-                <Eye className="w-4 h-4 mr-2" />
-                View
+                <Image className="w-4 h-4 mr-2" />
+                {onManageImages ? "Ảnh" : "View"}
               </Button>
             )}
             {onEdit && (

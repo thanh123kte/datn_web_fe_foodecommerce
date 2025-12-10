@@ -81,7 +81,7 @@ export function CategoryTable({
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <Input
-                placeholder="Search categories by name or description..."
+                placeholder="Tìm kiếm danh mục theo tên hoặc mô tả..."
                 value={filters.search || ""}
                 onChange={(e) => handleFilterChange({ search: e.target.value })}
                 className="w-full"
@@ -104,9 +104,9 @@ export function CategoryTable({
                 }
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All Status</option>
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
+                <option value="">Tất cả trạng thái</option>
+                <option value="true">Hoạt động</option>
+                <option value="false">Không hoạt động</option>
               </select>
               <select
                 value={filters.sort_by || "created_at"}
@@ -117,9 +117,9 @@ export function CategoryTable({
                 }
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="created_at">Sort by Created Date</option>
-                <option value="name">Sort by Name</option>
-                <option value="products_count">Sort by Products Count</option>
+                <option value="created_at">Sắp xếp theo ngày tạo</option>
+                <option value="name">Sắp xếp theo tên</option>
+                <option value="products_count">Sắp xếp theo số sản phẩm</option>
               </select>
             </div>
           </div>
@@ -132,14 +132,14 @@ export function CategoryTable({
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="text-left p-4 font-medium text-gray-700">
-                Category
+                Danh mục
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
                 <button
                   onClick={() => handleSort("name")}
                   className="flex items-center gap-1 hover:text-blue-600"
                 >
-                  Name
+                  Tên
                   {sortField === "name" && (
                     <span className="text-xs">
                       {sortDirection === "asc" ? "↑" : "↓"}
@@ -147,15 +147,13 @@ export function CategoryTable({
                   )}
                 </button>
               </th>
-              <th className="text-left p-4 font-medium text-gray-700">
-                Description
-              </th>
+              <th className="text-left p-4 font-medium text-gray-700">Mô tả</th>
               <th className="text-left p-4 font-medium text-gray-700">
                 <button
                   onClick={() => handleSort("products_count")}
                   className="flex items-center gap-1 hover:text-blue-600"
                 >
-                  Products
+                  Sản phẩm
                   {sortField === "products_count" && (
                     <span className="text-xs">
                       {sortDirection === "asc" ? "↑" : "↓"}
@@ -168,7 +166,7 @@ export function CategoryTable({
                   onClick={() => handleSort("created_at")}
                   className="flex items-center gap-1 hover:text-blue-600"
                 >
-                  Created
+                  Ngày tạo
                   {sortField === "created_at" && (
                     <span className="text-xs">
                       {sortDirection === "asc" ? "↑" : "↓"}
@@ -177,10 +175,10 @@ export function CategoryTable({
                 </button>
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Status
+                Trạng thái
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Actions
+                Thao tác
               </th>
             </tr>
           </thead>
@@ -206,7 +204,7 @@ export function CategoryTable({
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                          No Image
+                          Không có ảnh
                         </div>
                       )}
                     </div>
@@ -227,7 +225,7 @@ export function CategoryTable({
                     <span className="font-semibold text-blue-600">
                       {category.products_count || 0}
                     </span>
-                    <span className="text-sm text-gray-500">products</span>
+                    <span className="text-sm text-gray-500">sản phẩm</span>
                   </div>
                 </td>
                 <td className="p-4">
@@ -241,7 +239,7 @@ export function CategoryTable({
                       category.is_active
                     )}`}
                   >
-                    {category.is_active ? "Active" : "Inactive"}
+                    {category.is_active ? "Hoạt động" : "Không hoạt động"}
                   </span>
                 </td>
                 <td className="p-4">
@@ -256,7 +254,7 @@ export function CategoryTable({
                         }}
                         className="text-blue-600 hover:text-blue-700"
                       >
-                        Edit
+                        Sửa
                       </Button>
                     )}
                     {onStatusChange && (
@@ -273,7 +271,7 @@ export function CategoryTable({
                             : "text-green-600 hover:text-green-700"
                         }
                       >
-                        {category.is_active ? "Deactivate" : "Activate"}
+                        {category.is_active ? "Vô hiệu hóa" : "Kích hoạt"}
                       </Button>
                     )}
                     {onDelete && (
@@ -286,7 +284,7 @@ export function CategoryTable({
                         }}
                         className="text-red-600 hover:text-red-700"
                       >
-                        Delete
+                        Xóa
                       </Button>
                     )}
                   </div>
@@ -299,7 +297,7 @@ export function CategoryTable({
 
       {categories.length === 0 && (
         <div className="text-center py-8 text-gray-500">
-          No categories found
+          Không tìm thấy danh mục nào
         </div>
       )}
     </Card>

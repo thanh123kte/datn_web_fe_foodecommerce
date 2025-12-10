@@ -84,7 +84,7 @@ export function UserTable({
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex-1 min-w-[200px]">
             <Input
-              placeholder="Search users by name or email..."
+              placeholder="Tìm kiếm người dùng theo tên hoặc email..."
               value={filters.search || ""}
               onChange={(e) => handleFilterChange({ search: e.target.value })}
               className="w-full"
@@ -100,10 +100,10 @@ export function UserTable({
               }
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">All Roles</option>
-              <option value={RoleType.ADMIN}>Admin</option>
-              <option value={RoleType.SELLER}>Seller</option>
-              <option value={RoleType.CUSTOMER}>Customer</option>
+              <option value="">Tất cả vai trò</option>
+              <option value={RoleType.ADMIN}>Quản trị viên</option>
+              <option value={RoleType.SELLER}>Người bán</option>
+              <option value={RoleType.CUSTOMER}>Khách hàng</option>
             </select>
             <select
               value={
@@ -121,9 +121,9 @@ export function UserTable({
               }
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">All Status</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
+              <option value="">Tất cả trạng thái</option>
+              <option value="true">Hoạt động</option>
+              <option value="false">Không hoạt động</option>
             </select>
           </div>
         </div>
@@ -152,7 +152,7 @@ export function UserTable({
                   onClick={() => handleSort("full_name")}
                   className="flex items-center gap-1 hover:text-blue-600"
                 >
-                  Name
+                  Tên
                   {sortField === "full_name" && (
                     <span className="text-xs">
                       {sortOrder === "asc" ? "↑" : "↓"}
@@ -161,17 +161,19 @@ export function UserTable({
                 </button>
               </th>
               <th className="text-left p-4 font-medium text-gray-700">Email</th>
-              <th className="text-left p-4 font-medium text-gray-700">Phone</th>
-              <th className="text-left p-4 font-medium text-gray-700">Roles</th>
+              <th className="text-left p-4 font-medium text-gray-700">SĐT</th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Status
+                Vai trò
+              </th>
+              <th className="text-left p-4 font-medium text-gray-700">
+                Trạng thái
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
                 <button
                   onClick={() => handleSort("created_at")}
                   className="flex items-center gap-1 hover:text-blue-600"
                 >
-                  Created
+                  Ngày tạo
                   {sortField === "created_at" && (
                     <span className="text-xs">
                       {sortOrder === "asc" ? "↑" : "↓"}
@@ -180,7 +182,7 @@ export function UserTable({
                 </button>
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Actions
+                Thao tác
               </th>
             </tr>
           </thead>
@@ -188,7 +190,7 @@ export function UserTable({
             {users.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center p-8 text-gray-500">
-                  No users found
+                  Không tìm thấy người dùng nào
                 </td>
               </tr>
             ) : (
@@ -237,7 +239,7 @@ export function UserTable({
                           : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {user.is_active ? "Active" : "Inactive"}
+                      {user.is_active ? "Hoạt động" : "Không hoạt động"}
                     </Badge>
                   </td>
                   <td className="p-4 text-gray-600 text-sm">
@@ -253,7 +255,7 @@ export function UserTable({
                           onUserClick?.(user);
                         }}
                       >
-                        View
+                        Xem
                       </Button>
                       <Button
                         size="sm"
@@ -263,7 +265,7 @@ export function UserTable({
                           onUserStatusChange?.(user.id, !user.is_active);
                         }}
                       >
-                        {user.is_active ? "Disable" : "Enable"}
+                        {user.is_active ? "Vô hiệu hóa" : "Kích hoạt"}
                       </Button>
                     </div>
                   </td>

@@ -8,3 +8,6 @@ export { UserStats } from "./UserStats";
 export { DriverTable } from "./DriverTable";
 export { DriverDetailModal } from "./DriverDetailModal";
 export { DriverStats } from "./DriverStats";
+
+// Product management components
+export { default as AdminProductFormModal } from "./AdminProductFormModal";

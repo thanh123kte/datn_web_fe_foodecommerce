@@ -45,9 +45,5 @@ export default function SellerLayout({
   }
 
   // Các trang khác sử dụng MainLayout với role seller
-  return (
-    <MainLayout userRole="seller" title="Seller Dashboard">
-      {children}
-    </MainLayout>
-  );
+  return <div>{children}</div>;
 }

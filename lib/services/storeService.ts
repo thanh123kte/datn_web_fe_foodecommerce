@@ -9,10 +9,12 @@ export interface Store {
   phone?: string;
   email?: string;
   website?: string;
+  imageUrl?: string;
   logoUrl?: string;
   bannerUrl?: string;
   ownerId: string;
   status: "ACTIVE" | "INACTIVE" | "PENDING" | "SUSPENDED";
+  opStatus?: "OPEN" | "CLOSED";
   createdAt: string;
   updatedAt: string;
 }

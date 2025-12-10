@@ -16,8 +16,8 @@ import {
   ShoppingCart,
   TrendingUp,
   Star,
-  Eye,
-  AlertTriangle,
+  Image,
+  Trash2,
 } from "lucide-react";
 import {
   ProductFilters,
@@ -29,9 +29,11 @@ import {
 } from "@/lib/mockData/products";
 import ProductFormModal from "./components/ProductFormModal";
 import ProductFilterPanel from "./components/ProductFilterPanel";
+import AdminProductFormModal from "@/components/admin/AdminProductFormModal";
 import {
   productService,
   ProductResponseDto,
+  ProductStatus,
 } from "@/lib/services/productService";
 import { productImageService } from "@/lib/services/productImageService";
 import { buildAbsoluteUrl } from "@/lib/config/env";
@@ -52,9 +54,12 @@ export default function ProductsPage() {
   // Modal states
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<UiProduct | null>(
     null
   );
+  const [selectedProductForImages, setSelectedProductForImages] =
+    useState<ProductResponseDto | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
 
   // Load products
@@ -181,18 +186,18 @@ export default function ProductsPage() {
         description: data.description,
         price: data.price,
         discountPrice: data.originalPrice || undefined,
-        status: data.status as "AVAILABLE" | "UNAVAILABLE",
+        status:
+          data.status === "AVAILABLE"
+            ? ProductStatus.AVAILABLE
+            : ProductStatus.UNAVAILABLE,
       };
 
       // Tạo sản phẩm
       const createdProduct = await productService.create(createData);
 
-      // Upload ảnh nếu có
+      // Upload ảnh nếu có - sử dụng add-more API
       if (files.length > 0) {
-        const uploadPromises = files.map((file) =>
-          productImageService.upload(createdProduct.id, file)
-        );
-        await Promise.all(uploadPromises);
+        await productImageService.addMore(createdProduct.id, files);
       }
 
       await loadProducts();
@@ -216,17 +221,18 @@ export default function ProductsPage() {
         description: data.description,
         price: data.price,
         discountPrice: data.originalPrice || undefined,
-        status: data.status as "AVAILABLE" | "UNAVAILABLE",
+        status:
+          data.status === "AVAILABLE"
+            ? ProductStatus.AVAILABLE
+            : ProductStatus.UNAVAILABLE,
       };
 
       await productService.update(Number(selectedProduct.id), updateData);
 
-      // Upload ảnh mới nếu có
+      // Upload ảnh mới nếu có - không cần vì ProductFormModal đã xử lý
+      // Các ảnh đã được upload qua add-more API trong modal
       if (files.length > 0) {
-        const uploadPromises = files.map((file) =>
-          productImageService.upload(Number(selectedProduct.id), file)
-        );
-        await Promise.all(uploadPromises);
+        await productImageService.addMore(Number(selectedProduct.id), files);
       }
 
       await loadProducts();
@@ -275,9 +281,29 @@ export default function ProductsPage() {
     setShowDeleteModal(true);
   };
 
-  const handleViewProduct = (productId: string) => {
-    // TODO: Navigate to product detail page or open view modal
-    console.log("View product:", productId);
+  const handleManageImages = async (productId: string) => {
+    // Tìm product từ danh sách
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+
+    // Lấy full product data từ API
+    try {
+      const productData = await productService.getById(Number(productId));
+      setSelectedProductForImages(productData);
+      setShowImageModal(true);
+    } catch (error) {
+      console.error("Error loading product:", error);
+      alert("Không thể tải thông tin sản phẩm. Vui lòng thử lại.");
+    }
+  };
+
+  const closeImageModal = () => {
+    setShowImageModal(false);
+    setSelectedProductForImages(null);
+  };
+
+  const handleRefreshProducts = () => {
+    loadProducts();
   };
 
   // Calculate stats
@@ -343,7 +369,7 @@ export default function ProductsPage() {
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Eye className="w-6 h-6 text-green-600" />
+                <Image className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </Card>
@@ -469,7 +495,7 @@ export default function ProductsPage() {
                 reviewCount={product.reviewCount}
                 tags={product.tags}
                 categoryName={product.categoryName}
-                onView={handleViewProduct}
+                onManageImages={() => handleManageImages(product.id)}
                 onEdit={() => openEditModal(product)}
                 onDelete={() => openDeleteModal(product)}
               />
@@ -592,10 +618,12 @@ export default function ProductsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleViewProduct(product.id)}
+                            onClick={() => handleManageImages(product.id)}
+                            title="Quản lý ảnh"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Image className="w-4 h-4" />
                           </Button>
+
                           <Button
                             variant="ghost"
                             size="sm"
@@ -609,7 +637,7 @@ export default function ProductsPage() {
                             onClick={() => openDeleteModal(product)}
                             className="text-red-600 hover:text-red-700"
                           >
-                            <AlertTriangle className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>
@@ -643,6 +671,14 @@ export default function ProductsPage() {
         onConfirm={handleDeleteProduct}
         product={selectedProduct}
         isLoading={modalLoading}
+      />
+
+      {/* Image Management Modal */}
+      <AdminProductFormModal
+        isOpen={showImageModal}
+        onClose={closeImageModal}
+        product={selectedProductForImages}
+        onRefresh={handleRefreshProducts}
       />
     </MainLayout>
   );

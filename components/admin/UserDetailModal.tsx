@@ -103,7 +103,7 @@ export function UserDetailModal({
               )}
               <div>
                 <h2 className="text-xl font-semibold">{user.full_name}</h2>
-                <p className="text-gray-600">User ID: #{user.id}</p>
+                <p className="text-gray-600">ID người dùng: #{user.id}</p>
               </div>
             </div>
             <Badge
@@ -113,28 +113,28 @@ export function UserDetailModal({
                   : "bg-red-100 text-red-800"
               }`}
             >
-              {user.is_active ? "Active" : "Inactive"}
+              {user.is_active ? "Hoạt động" : "Không hoạt động"}
             </Badge>
           </div>
           <div className="flex items-center gap-2">
             {!editMode ? (
               <>
                 <Button variant="outline" onClick={() => setEditMode(true)}>
-                  Edit
+                  Chỉnh sửa
                 </Button>
                 <Button
                   variant={user.is_active ? "outline" : "default"}
                   onClick={() => onStatusChange?.(user.id, !user.is_active)}
                 >
-                  {user.is_active ? "Disable" : "Enable"}
+                  {user.is_active ? "Vô hiệu hóa" : "Kích hoạt"}
                 </Button>
               </>
             ) : (
               <>
                 <Button variant="outline" onClick={handleCancel}>
-                  Cancel
+                  Hủy
                 </Button>
-                <Button onClick={handleSave}>Save Changes</Button>
+                <Button onClick={handleSave}>Lưu thay đổi</Button>
               </>
             )}
             <Button variant="ghost" onClick={onClose}>
@@ -146,10 +146,10 @@ export function UserDetailModal({
         <div className="p-6 space-y-6">
           {/* Basic Information */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+            <h3 className="text-lg font-semibold mb-4">Thông tin cơ bản</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="full_name">Full Name</Label>
+                <Label htmlFor="full_name">Họ tên</Label>
                 {editMode ? (
                   <Input
                     id="full_name"
@@ -206,10 +206,10 @@ export function UserDetailModal({
                     }
                     className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+                    <option value="">Chọn giới tính</option>
+                    <option value="male">Nam</option>
+                    <option value="female">Nữ</option>
+                    <option value="other">Khác</option>
                   </select>
                 ) : (
                   <p className="mt-1 p-2 bg-gray-50 rounded">
@@ -218,7 +218,7 @@ export function UserDetailModal({
                 )}
               </div>
               <div>
-                <Label htmlFor="date_of_birth">Date of Birth</Label>
+                <Label htmlFor="date_of_birth">Ngày sinh</Label>
                 {editMode ? (
                   <Input
                     id="date_of_birth"
@@ -240,9 +240,9 @@ export function UserDetailModal({
                 )}
               </div>
               <div>
-                <Label>Account Status</Label>
+                <Label>Trạng thái tài khoản</Label>
                 <p className="mt-1 p-2 bg-gray-50 rounded">
-                  {user.is_active ? "Active" : "Inactive"}
+                  {user.is_active ? "Hoạt động" : "Không hoạt động"}
                 </p>
               </div>
             </div>
@@ -250,7 +250,7 @@ export function UserDetailModal({
 
           {/* Roles */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Roles</h3>
+            <h3 className="text-lg font-semibold mb-4">Vai trò</h3>
             <div className="flex flex-wrap gap-2">
               {user.roles.map((role) => (
                 <Badge key={role.id} className={getRoleBadgeColor(role.name)}>
@@ -268,7 +268,7 @@ export function UserDetailModal({
           {/* Addresses */}
           {addresses.length > 0 && (
             <div>
-              <h3 className="text-lg font-semibold mb-4">Addresses</h3>
+              <h3 className="text-lg font-semibold mb-4">Địa chỉ</h3>
               <div className="space-y-3">
                 {addresses.map((address) => (
                   <Card key={address.id} className="p-4">
@@ -281,13 +281,13 @@ export function UserDetailModal({
                           <span className="text-gray-600">{address.phone}</span>
                           {address.is_default && (
                             <Badge className="bg-blue-100 text-blue-800 text-xs">
-                              Default
+                              Mặc định
                             </Badge>
                           )}
                         </div>
                         <p className="text-gray-700">{address.address}</p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Added: {formatDate(address.created_at)}
+                          Đã thêm: {formatDate(address.created_at)}
                         </p>
                       </div>
                     </div>
@@ -299,16 +299,16 @@ export function UserDetailModal({
 
           {/* Account Information */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Account Information</h3>
+            <h3 className="text-lg font-semibold mb-4">Thông tin tài khoản</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label>Created At</Label>
+                <Label>Ngày tạo</Label>
                 <p className="mt-1 p-2 bg-gray-50 rounded">
                   {formatDate(user.created_at)}
                 </p>
               </div>
               <div>
-                <Label>Last Updated</Label>
+                <Label>Cập nhật lần cuối</Label>
                 <p className="mt-1 p-2 bg-gray-50 rounded">
                   {formatDate(user.updated_at)}
                 </p>

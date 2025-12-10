@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
+import { userService } from "@/lib/services/userService";
+import { driverService } from "@/lib/services/driverService";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -20,6 +22,30 @@ export default function MainLayout({
   className = "",
 }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingStoresCount, setPendingStoresCount] = useState(0);
+  const [pendingDriversCount, setPendingDriversCount] = useState(0);
+
+  // Fetch pending counts for admin
+  useEffect(() => {
+    if (userRole === "admin") {
+      const fetchPendingCounts = async () => {
+        try {
+          const [storesCount, driversCount] = await Promise.all([
+            userService.getPendingStoresCount(),
+            driverService.getPendingDriversCount(),
+          ]);
+          setPendingStoresCount(storesCount);
+          setPendingDriversCount(driversCount);
+        } catch (error) {
+          console.error("Failed to fetch pending counts:", error);
+        }
+      };
+      fetchPendingCounts();
+      // Refresh counts every 30 seconds
+      const interval = setInterval(fetchPendingCounts, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [userRole]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -59,6 +85,8 @@ export default function MainLayout({
           isOpen={sidebarOpen}
           onClose={closeSidebar}
           userRole={userRole}
+          pendingStoresCount={pendingStoresCount}
+          pendingDriversCount={pendingDriversCount}
         />
 
         {/* Main Content */}

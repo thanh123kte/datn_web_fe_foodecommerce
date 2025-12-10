@@ -9,122 +9,38 @@ import {
   Eye,
   Ban,
   CheckCircle,
-  Star,
   Shield,
   ShieldX,
+  Loader2,
 } from "lucide-react";
-import { Product, ProductFilters, AdminStatus } from "@/types/product";
+import {
+  ProductResponseDto,
+  ProductStatus,
+  AdminStatus,
+} from "@/lib/services/productService";
 
 interface ProductTableProps {
-  onView?: (product: Product) => void;
-  onBan?: (product: Product) => void;
-  onUnban?: (product: Product) => void;
+  products: ProductResponseDto[];
+  isLoading?: boolean;
+  onView?: (product: ProductResponseDto) => void;
+  onBan?: (product: ProductResponseDto) => void;
+  onUnban?: (product: ProductResponseDto) => void;
+  onManageImages?: (product: ProductResponseDto) => void;
+  primaryImages?: Map<number, string>; // Map of productId to primary image URL
 }
 
-// Mock data với cấu trúc mới
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "Bánh mì thịt nướng",
-    description: "Bánh mì thơm ngon với thịt nướng và rau sống tươi",
-    price: 25000,
-    images: ["/images/banh-mi-1.jpg", "/images/banh-mi-2.jpg"],
-    categoryId: "1",
-    categoryName: "Bánh mì",
-    sellerId: "1",
-    sellerName: "Quán Bánh Mì Sài Gòn",
-    rating: 4.5,
-    reviewCount: 28,
-    admin_status: AdminStatus.NORMAL,
-    createdAt: "2024-01-15T10:00:00Z",
-    updatedAt: "2024-01-20T15:30:00Z",
-  },
-  {
-    id: "2",
-    name: "Phở bò đặc biệt",
-    description: "Phở bò nước trong, thịt mềm, bánh phở tươi",
-    price: 45000,
-    images: ["/images/pho-bo-1.jpg"],
-    categoryId: "2",
-    categoryName: "Phở",
-    sellerId: "2",
-    sellerName: "Phở Hà Nội Truyền Thống",
-    rating: 4.8,
-    reviewCount: 42,
-    admin_status: AdminStatus.NORMAL,
-    createdAt: "2024-01-10T08:00:00Z",
-    updatedAt: "2024-01-22T12:00:00Z",
-  },
-  {
-    id: "3",
-    name: "Bánh xèo miền Tây",
-    description: "Bánh xèo giòn tan với tôm tươi và thịt heo",
-    price: 35000,
-    images: ["/images/banh-xeo-1.jpg"],
-    categoryId: "3",
-    categoryName: "Bánh xèo",
-    sellerId: "3",
-    sellerName: "Quán Ăn Miền Tây",
-    rating: 4.2,
-    reviewCount: 15,
-    admin_status: AdminStatus.BANNED,
-    createdAt: "2024-01-18T14:00:00Z",
-    updatedAt: "2024-01-18T14:00:00Z",
-  },
-  {
-    id: "4",
-    name: "Bún chả Hà Nội",
-    description: "Bún chả thơm phức với chả nướng và nước chấm đậm đà",
-    price: 40000,
-    images: ["/images/bun-cha-1.jpg"],
-    categoryId: "4",
-    categoryName: "Bún",
-    sellerId: "4",
-    sellerName: "Bún Chả Cô Ba",
-    rating: 4.7,
-    reviewCount: 58,
-    admin_status: AdminStatus.NORMAL,
-    createdAt: "2024-01-12T11:00:00Z",
-    updatedAt: "2024-01-21T16:45:00Z",
-  },
-  {
-    id: "5",
-    name: "Cơm tấm sườn nướng",
-    description: "Cơm tấm với sườn nướng, chả trứng và nước mắm pha",
-    price: 38000,
-    images: ["/images/com-tam-1.jpg"],
-    categoryId: "5",
-    categoryName: "Cơm",
-    sellerId: "5",
-    sellerName: "Cơm Tấm Sài Gòn",
-    rating: 4.6,
-    reviewCount: 87,
-    admin_status: AdminStatus.BANNED,
-    createdAt: "2024-01-08T09:00:00Z",
-    updatedAt: "2024-01-19T13:20:00Z",
-  },
-];
-
-// Mock categories và sellers
-const mockCategories = [
-  { id: "1", name: "Bánh mì" },
-  { id: "2", name: "Phở" },
-  { id: "3", name: "Bánh xèo" },
-  { id: "4", name: "Bún" },
-  { id: "5", name: "Cơm" },
-];
-
-const mockSellers = [
-  { id: "1", name: "Quán Bánh Mì Sài Gòn" },
-  { id: "2", name: "Phở Hà Nội Truyền Thống" },
-  { id: "3", name: "Quán Ăn Miền Tây" },
-  { id: "4", name: "Bún Chả Cô Ba" },
-  { id: "5", name: "Cơm Tấm Sài Gòn" },
-];
+interface ProductFilters {
+  search?: string;
+  categoryId?: number;
+  storeId?: number;
+  adminStatus?: AdminStatus;
+  sortBy?: "name" | "price" | "createdAt" | "updatedAt";
+  sortOrder?: "asc" | "desc";
+}
 
 const getAdminStatusColor = (adminStatus: AdminStatus) => {
   switch (adminStatus) {
-    case AdminStatus.NORMAL:
+    case AdminStatus.ACTIVE:
       return "text-green-600 bg-green-50";
     case AdminStatus.BANNED:
       return "text-red-600 bg-red-50";
@@ -135,7 +51,7 @@ const getAdminStatusColor = (adminStatus: AdminStatus) => {
 
 const getAdminStatusIcon = (adminStatus: AdminStatus) => {
   switch (adminStatus) {
-    case AdminStatus.NORMAL:
+    case AdminStatus.ACTIVE:
       return <Shield className="w-4 h-4" />;
     case AdminStatus.BANNED:
       return <ShieldX className="w-4 h-4" />;
@@ -146,19 +62,34 @@ const getAdminStatusIcon = (adminStatus: AdminStatus) => {
 
 const getAdminStatusText = (adminStatus: AdminStatus) => {
   switch (adminStatus) {
-    case AdminStatus.NORMAL:
-      return "Normal";
+    case AdminStatus.ACTIVE:
+      return "Hoạt động";
     case AdminStatus.BANNED:
-      return "Banned";
+      return "Đã cấm";
     default:
-      return "Unknown";
+      return "Không xác định";
+  }
+};
+
+const getProductStatusText = (status: ProductStatus) => {
+  switch (status) {
+    case ProductStatus.AVAILABLE:
+      return "Có sẵn";
+    case ProductStatus.UNAVAILABLE:
+      return "Không có sẵn";
+    default:
+      return "Không xác định";
   }
 };
 
 export const ProductTable: React.FC<ProductTableProps> = ({
+  products,
+  isLoading = false,
   onView,
   onBan,
   onUnban,
+  onManageImages,
+  primaryImages,
 }) => {
   const [filters, setFilters] = useState<ProductFilters>({
     search: "",
@@ -169,8 +100,35 @@ export const ProductTable: React.FC<ProductTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Get unique categories and stores from products
+  const categories = useMemo(() => {
+    const uniqueCategories = new Map<number, string>();
+    products.forEach((product) => {
+      if (product.categoryId && product.categoryName) {
+        uniqueCategories.set(product.categoryId, product.categoryName);
+      }
+    });
+    return Array.from(uniqueCategories.entries()).map(([id, name]) => ({
+      id,
+      name,
+    }));
+  }, [products]);
+
+  const stores = useMemo(() => {
+    const uniqueStores = new Map<number, string>();
+    products.forEach((product) => {
+      if (product.storeName) {
+        uniqueStores.set(product.storeId, product.storeName);
+      }
+    });
+    return Array.from(uniqueStores.entries()).map(([id, name]) => ({
+      id,
+      name,
+    }));
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
-    let result = [...mockProducts];
+    let result = [...products];
 
     // Search filter
     if (filters.search) {
@@ -178,16 +136,16 @@ export const ProductTable: React.FC<ProductTableProps> = ({
       result = result.filter(
         (product) =>
           product.name.toLowerCase().includes(searchLower) ||
-          product.description.toLowerCase().includes(searchLower) ||
-          product.categoryName.toLowerCase().includes(searchLower) ||
-          product.sellerName.toLowerCase().includes(searchLower)
+          (product.description?.toLowerCase() || "").includes(searchLower) ||
+          (product.categoryName?.toLowerCase() || "").includes(searchLower) ||
+          (product.storeName?.toLowerCase() || "").includes(searchLower)
       );
     }
 
     // Admin status filter
     if (filters.adminStatus) {
       result = result.filter(
-        (product) => product.admin_status === filters.adminStatus
+        (product) => product.adminStatus === filters.adminStatus
       );
     }
 
@@ -198,18 +156,16 @@ export const ProductTable: React.FC<ProductTableProps> = ({
       );
     }
 
-    // Seller filter
-    if (filters.sellerId) {
-      result = result.filter(
-        (product) => product.sellerId === filters.sellerId
-      );
+    // Store filter
+    if (filters.storeId) {
+      result = result.filter((product) => product.storeId === filters.storeId);
     }
 
     // Sorting
     if (filters.sortBy) {
       result.sort((a, b) => {
-        let aValue = a[filters.sortBy as keyof Product];
-        let bValue = b[filters.sortBy as keyof Product];
+        let aValue = a[filters.sortBy as keyof ProductResponseDto];
+        let bValue = b[filters.sortBy as keyof ProductResponseDto];
 
         if (typeof aValue === "string") aValue = aValue.toLowerCase();
         if (typeof bValue === "string") bValue = bValue.toLowerCase();
@@ -221,7 +177,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
     }
 
     return result;
-  }, [filters]);
+  }, [products, filters]);
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -242,10 +198,10 @@ export const ProductTable: React.FC<ProductTableProps> = ({
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Product Management
-          </h2>
-          <p className="text-gray-600">Manage all products in the system</p>
+          <h2 className="text-2xl font-bold text-gray-900">Quản lý sản phẩm</h2>
+          <p className="text-gray-600">
+            Quản lý tất cả sản phẩm trong hệ thống
+          </p>
         </div>
       </div>
 
@@ -256,7 +212,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
-              placeholder="Search products..."
+              placeholder="Tìm kiếm sản phẩm..."
               value={filters.search || ""}
               onChange={(e) =>
                 setFilters({ ...filters, search: e.target.value })
@@ -271,31 +227,36 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             onChange={(e) =>
               setFilters({
                 ...filters,
-                categoryId: e.target.value || undefined,
+                categoryId: e.target.value ? Number(e.target.value) : undefined,
               })
             }
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
           >
-            <option value="">All categories</option>
-            {mockCategories.map((category) => (
+            <option value="">Tất cả danh mục</option>
+            {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
             ))}
           </select>
 
-          {/* Seller Filter */}
+          {/* Store Filter */}
           <select
-            value={filters.sellerId || ""}
+            value={filters.storeId || ""}
             onChange={(e) =>
-              setFilters({ ...filters, sellerId: e.target.value || undefined })
+              setFilters({
+                ...filters,
+                storeId: e.target.value ? Number(e.target.value) : undefined,
+              })
             }
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
           >
-            <option value="">All stores</option>
-            {mockSellers.map((seller) => (
-              <option key={seller.id} value={seller.id}>
-                {seller.name}
+            <option value="">Tất cả cửa hàng</option>
+            {stores.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.name}
               </option>
             ))}
           </select>
@@ -310,10 +271,11 @@ export const ProductTable: React.FC<ProductTableProps> = ({
               })
             }
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
           >
-            <option value="">All admin status</option>
-            <option value={AdminStatus.NORMAL}>Normal</option>
-            <option value={AdminStatus.BANNED}>Banned</option>
+            <option value="">Tất cả trạng thái</option>
+            <option value={AdminStatus.ACTIVE}>Hoạt động</option>
+            <option value={AdminStatus.BANNED}>Đã cấm</option>
           </select>
 
           {/* Sort */}
@@ -329,13 +291,13 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             }}
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="updatedAt-desc">Recently updated</option>
-            <option value="createdAt-desc">Recently created</option>
-            <option value="name-asc">Name A-Z</option>
-            <option value="name-desc">Name Z-A</option>
-            <option value="price-asc">Price low to high</option>
-            <option value="price-desc">Price high to low</option>
-            <option value="rating-desc">Highest rating</option>
+            <option value="updatedAt-desc">Cập nhật gần đây</option>
+            <option value="createdAt-desc">Mới tạo gần đây</option>
+            <option value="name-asc">Tên A-Z</option>
+            <option value="name-desc">Tên Z-A</option>
+            <option value="price-asc">Giá thấp đến cao</option>
+            <option value="price-desc">Giá cao đến thấp</option>
+            <option value="price-desc">Giá cao đến thấp</option>
           </select>
         </div>
       </Card>
@@ -343,146 +305,195 @@ export const ProductTable: React.FC<ProductTableProps> = ({
       {/* Results Summary */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600">
-          Showing {paginatedProducts.length} of {filteredProducts.length}{" "}
-          products
+          {isLoading
+            ? "Đang tải..."
+            : `Hiển thị ${paginatedProducts.length} trong số ${filteredProducts.length} sản phẩm`}
         </p>
       </div>
 
       {/* Products Table */}
       <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Product
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Store
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Price
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rating
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Admin Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-16 w-16">
-                        <img
-                          className="h-16 w-16 rounded-lg object-cover"
-                          src={
-                            product.images[0] ||
-                            "https://via.placeholder.com/64x64/f3f4f6/9ca3af?text=Product"
-                          }
-                          alt={product.name}
-                          onError={(e) => {
-                            e.currentTarget.src =
-                              "https://via.placeholder.com/64x64/f3f4f6/9ca3af?text=Product";
-                          }}
-                        />
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 line-clamp-1">
-                          {product.name}
-                        </div>
-                        <div className="text-sm text-gray-500 line-clamp-2 max-w-xs">
-                          {product.description}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {product.categoryName}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {product.sellerName}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {formatPrice(product.price)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                      <span className="text-sm text-gray-900">
-                        {product.rating}
-                      </span>
-                      <span className="text-xs text-gray-500 ml-1">
-                        ({product.reviewCount})
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getAdminStatusColor(
-                        product.admin_status
-                      )}`}
-                    >
-                      {getAdminStatusIcon(product.admin_status)}
-                      <span className="ml-1">
-                        {getAdminStatusText(product.admin_status)}
-                      </span>
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onView?.(product)}
-                        className="p-2"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {product.admin_status === AdminStatus.NORMAL ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onBan?.(product)}
-                          className="p-2 text-red-600 hover:text-red-800"
-                          title="Ban Product"
-                        >
-                          <Ban className="w-4 h-4" />
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onUnban?.(product)}
-                          className="p-2 text-green-600 hover:text-green-800"
-                          title="Unban Product"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </td>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+          </div>
+        ) : paginatedProducts.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Không tìm thấy sản phẩm nào</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ảnh
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Sản phẩm
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Danh mục
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cửa hàng
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Giá
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trạng thái
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trạng thái quản trị
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Thao tác
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginatedProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex-shrink-0 h-16 w-16">
+                        {primaryImages?.get(product.id) ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={primaryImages.get(product.id)}
+                            alt={product.name}
+                            className="h-16 w-16 rounded-lg object-cover border border-gray-200"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/images/product-placeholder.jpg";
+                            }}
+                          />
+                        ) : (
+                          <div className="h-16 w-16 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
+                            <span className="text-gray-400 text-xs">
+                              Không có ảnh
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 line-clamp-1">
+                            {product.name}
+                          </div>
+                          <div className="text-sm text-gray-500 line-clamp-2 max-w-xs">
+                            {product.description || "Không có mô tả"}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {product.categoryName || "-"}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {product.storeName || "-"}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {formatPrice(product.price)}
+                      </div>
+                      {product.discountPrice &&
+                        product.discountPrice < product.price && (
+                          <div className="text-xs text-gray-500 line-through">
+                            {formatPrice(product.discountPrice)}
+                          </div>
+                        )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                          product.status === ProductStatus.AVAILABLE
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {getProductStatusText(product.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getAdminStatusColor(
+                          product.adminStatus
+                        )}`}
+                      >
+                        {getAdminStatusIcon(product.adminStatus)}
+                        <span className="ml-1">
+                          {getAdminStatusText(product.adminStatus)}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onView?.(product)}
+                          className="p-2"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        {/* <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onManageImages?.(product)}
+                          className="p-2 text-blue-600 hover:text-blue-800"
+                          title="Manage Images"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                        </Button> */}
+                        {product.adminStatus === AdminStatus.ACTIVE ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onBan?.(product)}
+                            className="p-2 text-red-600 hover:text-red-800"
+                            title="Ban Product"
+                          >
+                            <Ban className="w-4 h-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onUnban?.(product)}
+                            className="p-2 text-green-600 hover:text-green-800"
+                            title="Unban Product"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -493,20 +504,20 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1}
               >
-                Previous
+                Trước
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
               >
-                Next
+                Sau
               </Button>
             </div>
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-700">
-                  Page <span className="font-medium">{currentPage}</span> of{" "}
+                  Trang <span className="font-medium">{currentPage}</span> /{" "}
                   <span className="font-medium">{totalPages}</span>
                 </p>
               </div>
@@ -518,7 +529,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     disabled={currentPage === 1}
                     className="rounded-r-none"
                   >
-                    Previous
+                    Trước
                   </Button>
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     const page = i + 1;
@@ -539,7 +550,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     disabled={currentPage === totalPages}
                     className="rounded-l-none"
                   >
-                    Next
+                    Sau
                   </Button>
                 </nav>
               </div>

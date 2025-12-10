@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { resolveAvatarUrl } from "@/lib/utils/imageUtils";
 
 interface DriverTableProps {
   drivers: Driver[];
@@ -58,27 +59,6 @@ export function DriverTable({
     }
   };
 
-  const getVehicleIcon = (vehicleDescription: string) => {
-    const description = vehicleDescription.toLowerCase();
-    if (
-      description.includes("wave") ||
-      description.includes("xe máy") ||
-      description.includes("motor")
-    ) {
-      return "🏍️";
-    }
-    if (description.includes("xe đạp") || description.includes("bicycle")) {
-      return "🚴";
-    }
-    if (description.includes("ô tô") || description.includes("car")) {
-      return "🚗";
-    }
-    if (description.includes("xe tay ga") || description.includes("scooter")) {
-      return "🛵";
-    }
-    return "🚚";
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -112,7 +92,7 @@ export function DriverTable({
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <Input
-                placeholder="Search drivers by name, phone, or license..."
+                placeholder="Tìm kiếm theo tên, số điện thoại hoặc bằng lái..."
                 value={filters.search || ""}
                 onChange={(e) => handleFilterChange({ search: e.target.value })}
                 className="w-full"
@@ -129,10 +109,10 @@ export function DriverTable({
                 }
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All Status</option>
-                <option value={VerificationStatus.PENDING}>Pending</option>
-                <option value={VerificationStatus.APPROVED}>Approved</option>
-                <option value={VerificationStatus.REJECTED}>Rejected</option>
+                <option value="">Tất cả trạng thái xác minh</option>
+                <option value={VerificationStatus.PENDING}>Chờ xác minh</option>
+                <option value={VerificationStatus.APPROVED}>Đã xác minh</option>
+                <option value={VerificationStatus.REJECTED}>Đã từ chối</option>
               </select>
 
               <select
@@ -151,9 +131,9 @@ export function DriverTable({
                 }
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All Verified</option>
-                <option value="true">Verified</option>
-                <option value="false">Not Verified</option>
+                <option value="">Tất cả trạng thái hoạt động</option>
+                <option value="true">Hoạt động</option>
+                <option value="false">Không hoạt động</option>
               </select>
             </div>
           </div>
@@ -166,36 +146,23 @@ export function DriverTable({
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="text-left p-4 font-medium text-gray-700">
-                <button
-                  onClick={() => handleSort("id")}
-                  className="flex items-center gap-1 hover:text-blue-600"
-                >
-                  ID
-                  {sortField === "id" && (
-                    <span className="text-xs">
-                      {sortOrder === "asc" ? "↑" : "↓"}
-                    </span>
-                  )}
-                </button>
+                Thông tin tài xế
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Driver Info
+                Phương tiện
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Vehicle
+                Giấy tờ
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Documents
-              </th>
-              <th className="text-left p-4 font-medium text-gray-700">
-                Verification
+                Xác minh
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
                 <button
                   onClick={() => handleSort("created_at")}
                   className="flex items-center gap-1 hover:text-blue-600"
                 >
-                  Joined
+                  Ngày tham gia
                   {sortField === "created_at" && (
                     <span className="text-xs">
                       {sortOrder === "asc" ? "↑" : "↓"}
@@ -204,15 +171,15 @@ export function DriverTable({
                 </button>
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Actions
+                Thao tác
               </th>
             </tr>
           </thead>
           <tbody>
             {drivers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center p-8 text-gray-500">
-                  No drivers found
+                <td colSpan={6} className="text-center p-8 text-gray-500">
+                  Không tìm thấy tài xế nào
                 </td>
               </tr>
             ) : (
@@ -222,20 +189,16 @@ export function DriverTable({
                   className="border-b hover:bg-gray-50 cursor-pointer"
                   onClick={() => onDriverClick?.(driver)}
                 >
-                  <td className="p-4 font-medium">#{driver.id}</td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      {driver.avatar_url ? (
-                        <img
-                          src={driver.avatar_url}
-                          alt={driver.full_name}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 text-sm font-medium">
-                          {driver.full_name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      <img
+                        src={resolveAvatarUrl(
+                          driver.avatar_url,
+                          driver.full_name
+                        )}
+                        alt={driver.full_name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
                       <div>
                         <div className="font-medium">{driver.full_name}</div>
                         <div className="text-sm text-gray-600">
@@ -245,15 +208,10 @@ export function DriverTable({
                     </div>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">
-                        {getVehicleIcon(driver.vehicle_type)}
-                      </span>
-                      <div>
-                        <div className="font-medium">{driver.vehicle_type}</div>
-                        <div className="text-sm text-gray-600">
-                          🏷️ {driver.vehicle_plate}
-                        </div>
+                    <div>
+                      <div className="font-medium">{driver.vehicle_type}</div>
+                      <div className="text-sm text-gray-600">
+                        🏷️ {driver.vehicle_plate}
                       </div>
                     </div>
                   </td>
@@ -270,7 +228,13 @@ export function DriverTable({
                           driver.verification_status
                         )}
                       >
-                        {driver.verification_status}
+                        {driver.verification_status ===
+                        VerificationStatus.PENDING
+                          ? "Chờ xác minh"
+                          : driver.verification_status ===
+                            VerificationStatus.APPROVED
+                          ? "Đã xác minh"
+                          : "Đã từ chối"}
                       </Badge>
                       <Badge
                         className={
@@ -279,7 +243,7 @@ export function DriverTable({
                             : "bg-gray-100 text-gray-800"
                         }
                       >
-                        {driver.verified ? "Verified" : "Not Verified"}
+                        {driver.verified ? "Hoạt động" : "Không hoạt động"}
                       </Badge>
                     </div>
                   </td>
@@ -296,7 +260,7 @@ export function DriverTable({
                           onDriverClick?.(driver);
                         }}
                       >
-                        View Details
+                        Xem chi tiết
                       </Button>
                       {driver.verification_status ===
                         VerificationStatus.PENDING && (
@@ -310,14 +274,14 @@ export function DriverTable({
                             }}
                             className="text-xs"
                           >
-                            Approve
+                            Phê duyệt
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={(e) => {
                               e.stopPropagation();
-                              const reason = prompt("Rejection reason:");
+                              const reason = prompt("Lý do từ chối:");
                               if (reason) {
                                 onVerificationAction?.(
                                   driver.id,
@@ -328,7 +292,7 @@ export function DriverTable({
                             }}
                             className="text-xs text-red-600 border-red-200 hover:bg-red-50"
                           >
-                            Reject
+                            Từ chối
                           </Button>
                         </div>
                       )}
@@ -339,7 +303,7 @@ export function DriverTable({
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const reason = prompt("Suspension reason:");
+                            const reason = prompt("Lý do đình chỉ:");
                             if (reason) {
                               onVerificationAction?.(
                                 driver.id,
@@ -350,7 +314,7 @@ export function DriverTable({
                           }}
                           className="text-xs text-red-600 border-red-200 hover:bg-red-50"
                         >
-                          Suspend
+                          Đình chỉ
                         </Button>
                       )}
                       {driver.verification_status ===
@@ -364,7 +328,7 @@ export function DriverTable({
                           }}
                           className="text-xs"
                         >
-                          Reactivate
+                          Kích hoạt lại
                         </Button>
                       )}
                     </div>

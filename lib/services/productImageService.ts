@@ -13,10 +13,15 @@ export interface ProductImage {
 class ProductImageService {
   private readonly basePath = "/api/product-images";
 
-  // Upload image cho product
-  async upload(productId: number, file: File): Promise<ProductImage> {
+  // Upload multiple images for product (backend accepts List<MultipartFile>)
+  async uploadMultiple(
+    productId: number,
+    files: File[]
+  ): Promise<ProductImage[]> {
     const formData = new FormData();
-    formData.append("files", file);
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
 
     const response = await axiosInstance.post(
       `${this.basePath}/upload/${productId}`,
@@ -30,7 +35,12 @@ class ProductImageService {
     return response.data;
   }
 
-  // Lấy tất cả ảnh của product
+  // Upload single image for product
+  async upload(productId: number, file: File): Promise<ProductImage[]> {
+    return this.uploadMultiple(productId, [file]);
+  }
+
+  // Get all images of a product
   async getByProductId(productId: number): Promise<ProductImage[]> {
     const response = await axiosInstance.get(
       `${this.basePath}/product/${productId}`
@@ -38,27 +48,39 @@ class ProductImageService {
     return response.data;
   }
 
-  // Xóa ảnh
+  // Delete an image
   async delete(imageId: number): Promise<void> {
     await axiosInstance.delete(`${this.basePath}/${imageId}`);
   }
 
-  // Đặt ảnh làm primary
+  // Delete all images of a product
+  async deleteAllByProduct(productId: number): Promise<void> {
+    await axiosInstance.delete(`${this.basePath}/product/${productId}`);
+  }
+
+  // Set image as primary
   async setPrimary(imageId: number): Promise<ProductImage> {
     const response = await axiosInstance.put(
-      `${this.basePath}/${imageId}/primary`
+      `${this.basePath}/${imageId}/set-primary`
     );
     return response.data;
   }
 
-  // Cập nhật thứ tự hiển thị
-  async updateOrder(
-    imageId: number,
-    displayOrder: number
-  ): Promise<ProductImage> {
-    const response = await axiosInstance.put(
-      `${this.basePath}/${imageId}/order`,
-      { displayOrder }
+  // Add more images to existing product (preserves existing primary image)
+  async addMore(productId: number, files: File[]): Promise<ProductImage[]> {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
+
+    const response = await axiosInstance.post(
+      `${this.basePath}/add-more/${productId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
     return response.data;
   }

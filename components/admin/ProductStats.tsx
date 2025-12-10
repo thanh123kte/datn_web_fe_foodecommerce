@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import {
   Package,
@@ -8,139 +8,131 @@ import {
   ShieldX,
   CheckCircle,
   XCircle,
-  Clock,
-  AlertCircle,
-  Eye,
   Users,
   Tag,
+  Loader2,
 } from "lucide-react";
-import { ProductStats, AdminStatus, ProductStatus } from "@/types/product";
+import {
+  ProductResponseDto,
+  ProductStatus,
+  AdminStatus,
+} from "@/lib/services/productService";
 
 interface ProductStatsComponentProps {
-  stats?: ProductStats;
+  products: ProductResponseDto[];
+  isLoading?: boolean;
 }
 
-// Mock data với cấu trúc mới
-const mockStats: ProductStats = {
-  totalProducts: 1250,
-  normalProducts: 987,
-  bannedProducts: 263,
-  categoryDistribution: [
-    { categoryId: "1", categoryName: "Bánh mì", count: 315, percentage: 25.2 },
-    { categoryId: "2", categoryName: "Phở", count: 225, percentage: 18.0 },
-    { categoryId: "3", categoryName: "Cơm", count: 200, percentage: 16.0 },
-    { categoryId: "4", categoryName: "Bún", count: 170, percentage: 13.6 },
-    { categoryId: "5", categoryName: "Bánh xèo", count: 115, percentage: 9.2 },
-    { categoryId: "6", categoryName: "Khác", count: 225, percentage: 18.0 },
-  ],
-  sellerDistribution: [
-    {
-      sellerId: "1",
-      sellerName: "Quán Bánh Mì Sài Gòn",
-      count: 45,
-      percentage: 3.6,
-    },
-    {
-      sellerId: "2",
-      sellerName: "Phở Hà Nội Truyền Thống",
-      count: 38,
-      percentage: 3.0,
-    },
-    {
-      sellerId: "3",
-      sellerName: "Quán Ăn Miền Tây",
-      count: 32,
-      percentage: 2.6,
-    },
-    { sellerId: "4", sellerName: "Bún Chả Cô Ba", count: 28, percentage: 2.2 },
-    {
-      sellerId: "5",
-      sellerName: "Cơm Tấm Sài Gòn",
-      count: 25,
-      percentage: 2.0,
-    },
-  ],
-  statusDistribution: [
-    { status: ProductStatus.APPROVED, count: 890, percentage: 71.2 },
-    { status: ProductStatus.PENDING, count: 125, percentage: 10.0 },
-    { status: ProductStatus.REJECTED, count: 85, percentage: 6.8 },
-    { status: ProductStatus.OUT_OF_STOCK, count: 95, percentage: 7.6 },
-    { status: ProductStatus.DISCONTINUED, count: 55, percentage: 4.4 },
-  ],
-  adminStatusDistribution: [
-    { adminStatus: AdminStatus.NORMAL, count: 987, percentage: 79.0 },
-    { adminStatus: AdminStatus.BANNED, count: 263, percentage: 21.0 },
-  ],
-};
-
 export const ProductStatsComponent: React.FC<ProductStatsComponentProps> = ({
-  stats = mockStats,
+  products,
+  isLoading = false,
 }) => {
+  // Calculate statistics from products
+  const stats = useMemo(() => {
+    const totalProducts = products.length;
+    const activeProducts = products.filter(
+      (p) => p.adminStatus === AdminStatus.ACTIVE
+    ).length;
+    const bannedProducts = products.filter(
+      (p) => p.adminStatus === AdminStatus.BANNED
+    ).length;
+
+    // Category distribution
+    const categoryMap = new Map<number, { name: string; count: number }>();
+    products.forEach((product) => {
+      if (product.categoryId && product.categoryName) {
+        const existing = categoryMap.get(product.categoryId);
+        if (existing) {
+          existing.count++;
+        } else {
+          categoryMap.set(product.categoryId, {
+            name: product.categoryName,
+            count: 1,
+          });
+        }
+      }
+    });
+    const categoryDistribution = Array.from(categoryMap.entries())
+      .map(([id, data]) => ({
+        categoryId: id,
+        categoryName: data.name,
+        count: data.count,
+        percentage: totalProducts > 0 ? (data.count / totalProducts) * 100 : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    // Store distribution
+    const storeMap = new Map<number, { name: string; count: number }>();
+    products.forEach((product) => {
+      if (product.storeName) {
+        const existing = storeMap.get(product.storeId);
+        if (existing) {
+          existing.count++;
+        } else {
+          storeMap.set(product.storeId, {
+            name: product.storeName,
+            count: 1,
+          });
+        }
+      }
+    });
+    const storeDistribution = Array.from(storeMap.entries())
+      .map(([id, data]) => ({
+        storeId: id,
+        storeName: data.name,
+        count: data.count,
+        percentage: totalProducts > 0 ? (data.count / totalProducts) * 100 : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Status distribution
+    const availableCount = products.filter(
+      (p) => p.status === ProductStatus.AVAILABLE
+    ).length;
+    const unavailableCount = products.filter(
+      (p) => p.status === ProductStatus.UNAVAILABLE
+    ).length;
+
+    return {
+      totalProducts,
+      activeProducts,
+      bannedProducts,
+      categoryDistribution,
+      storeDistribution,
+      availableCount,
+      unavailableCount,
+    };
+  }, [products]);
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat("vi-VN").format(num);
   };
 
-  const getStatusIcon = (status: ProductStatus) => {
-    switch (status) {
-      case ProductStatus.APPROVED:
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case ProductStatus.PENDING:
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case ProductStatus.REJECTED:
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      case ProductStatus.OUT_OF_STOCK:
-        return <AlertCircle className="w-4 h-4 text-orange-500" />;
-      case ProductStatus.DISCONTINUED:
-        return <XCircle className="w-4 h-4 text-gray-500" />;
-      default:
-        return <Package className="w-4 h-4 text-blue-500" />;
-    }
-  };
-
   const getStatusText = (status: ProductStatus) => {
     switch (status) {
-      case ProductStatus.APPROVED:
-        return "Đã duyệt";
-      case ProductStatus.PENDING:
-        return "Chờ duyệt";
-      case ProductStatus.REJECTED:
-        return "Bị từ chối";
-      case ProductStatus.OUT_OF_STOCK:
-        return "Hết hàng";
-      case ProductStatus.DISCONTINUED:
-        return "Ngừng KD";
+      case ProductStatus.AVAILABLE:
+        return "Có sẵn";
+      case ProductStatus.UNAVAILABLE:
+        return "Không có sẵn";
       default:
-        return "Không xác định";
+        return "Không rõ";
     }
   };
 
-  const getAdminStatusIcon = (adminStatus: AdminStatus) => {
-    switch (adminStatus) {
-      case AdminStatus.NORMAL:
-        return <Shield className="w-4 h-4 text-green-500" />;
-      case AdminStatus.BANNED:
-        return <ShieldX className="w-4 h-4 text-red-500" />;
-      default:
-        return <Shield className="w-4 h-4 text-blue-500" />;
-    }
-  };
-
-  const getAdminStatusText = (adminStatus: AdminStatus) => {
-    switch (adminStatus) {
-      case AdminStatus.NORMAL:
-        return "Bình thường";
-      case AdminStatus.BANNED:
-        return "Bị cấm";
-      default:
-        return "Không xác định";
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+        <Card className="p-6 gap-0">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Tổng sản phẩm</p>
@@ -153,18 +145,18 @@ export const ProductStatsComponent: React.FC<ProductStatsComponentProps> = ({
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-blue-600 font-medium">Toàn hệ thống</span>
+            <span className="text-blue-600 font-medium">Tất cả sản phẩm</span>
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-6 gap-0">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">
-                Sản phẩm bình thường
+                Sản phẩm hoạt động
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {formatNumber(stats.normalProducts)}
+                {formatNumber(stats.activeProducts)}
               </p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
@@ -173,13 +165,16 @@ export const ProductStatsComponent: React.FC<ProductStatsComponentProps> = ({
           </div>
           <div className="mt-4 flex items-center text-sm">
             <span className="text-green-600 font-medium">
-              {Math.round((stats.normalProducts / stats.totalProducts) * 100)}%
+              {stats.totalProducts > 0
+                ? Math.round((stats.activeProducts / stats.totalProducts) * 100)
+                : 0}
+              %
             </span>
             <span className="text-gray-600 ml-1">của tổng số</span>
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-6 gap-0">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">
@@ -195,195 +190,35 @@ export const ProductStatsComponent: React.FC<ProductStatsComponentProps> = ({
           </div>
           <div className="mt-4 flex items-center text-sm">
             <span className="text-red-600 font-medium">
-              {Math.round((stats.bannedProducts / stats.totalProducts) * 100)}%
+              {stats.totalProducts > 0
+                ? Math.round((stats.bannedProducts / stats.totalProducts) * 100)
+                : 0}
+              %
             </span>
             <span className="text-gray-600 ml-1">bị cấm</span>
           </div>
         </Card>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Category Distribution */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Phân bố theo danh mục
-            </h3>
-            <Tag className="w-5 h-5 text-blue-500" />
-          </div>
-          <div className="space-y-3">
-            {stats.categoryDistribution.map((category, index) => (
-              <div key={category.categoryId} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900">
-                    {category.categoryName}
-                  </span>
-                  <span className="text-sm text-gray-600">
-                    {formatNumber(category.count)} ({category.percentage}%)
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full ${
-                      index % 6 === 0
-                        ? "bg-blue-500"
-                        : index % 6 === 1
-                        ? "bg-green-500"
-                        : index % 6 === 2
-                        ? "bg-yellow-500"
-                        : index % 6 === 3
-                        ? "bg-red-500"
-                        : index % 6 === 4
-                        ? "bg-purple-500"
-                        : "bg-pink-500"
-                    }`}
-                    style={{ width: `${category.percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Top Sellers */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Top cửa hàng
-            </h3>
-            <Users className="w-5 h-5 text-purple-500" />
-          </div>
-          <div className="space-y-3">
-            {stats.sellerDistribution.slice(0, 5).map((seller, index) => (
-              <div
-                key={seller.sellerId}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex items-center">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      index === 0
-                        ? "bg-yellow-100 text-yellow-800"
-                        : index === 1
-                        ? "bg-gray-100 text-gray-800"
-                        : index === 2
-                        ? "bg-orange-100 text-orange-800"
-                        : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    {index + 1}
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]">
-                      {seller.sellerName}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {formatNumber(seller.count)} sản phẩm
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {seller.percentage}%
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Status Distribution */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Phân bố trạng thái sản phẩm
-            </h3>
-            <Eye className="w-5 h-5 text-blue-500" />
-          </div>
-          <div className="space-y-3">
-            {stats.statusDistribution.map((status) => (
-              <div
-                key={status.status}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex items-center">
-                  {getStatusIcon(status.status)}
-                  <span className="ml-2 text-sm font-medium text-gray-900">
-                    {getStatusText(status.status)}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-sm text-gray-600 mr-2">
-                    {formatNumber(status.count)}
-                  </span>
-                  <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
-                    {status.percentage}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Admin Status Distribution */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Trạng thái quản lý
-            </h3>
-            <Package className="w-5 h-5 text-green-500" />
-          </div>
-          <div className="space-y-3">
-            {stats.adminStatusDistribution.map((adminStatus) => (
-              <div
-                key={adminStatus.adminStatus}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex items-center">
-                  {getAdminStatusIcon(adminStatus.adminStatus)}
-                  <span className="ml-2 text-sm font-medium text-gray-900">
-                    {getAdminStatusText(adminStatus.adminStatus)}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-sm text-gray-600 mr-2">
-                    {formatNumber(adminStatus.count)}
-                  </span>
-                  <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
-                    {adminStatus.percentage}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Visual Progress Bar */}
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between text-xs text-gray-600">
-              <span>Tỷ lệ sản phẩm bình thường</span>
-              <span>
-                {
-                  stats.adminStatusDistribution.find(
-                    (s) => s.adminStatus === AdminStatus.NORMAL
-                  )?.percentage
-                }
-                %
-              </span>
+        <Card className="p-6 gap-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Có sẵn</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {formatNumber(stats.availableCount)}
+              </p>
             </div>
-            <div className="w-full bg-red-200 rounded-full h-3">
-              <div
-                className="h-3 bg-green-500 rounded-full transition-all duration-500"
-                style={{
-                  width: `${
-                    stats.adminStatusDistribution.find(
-                      (s) => s.adminStatus === AdminStatus.NORMAL
-                    )?.percentage || 0
-                  }%`,
-                }}
-              ></div>
+            <div className="p-3 bg-emerald-100 rounded-full">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
             </div>
+          </div>
+          <div className="mt-4 flex items-center text-sm">
+            <span className="text-emerald-600 font-medium">
+              {stats.totalProducts > 0
+                ? Math.round((stats.availableCount / stats.totalProducts) * 100)
+                : 0}
+              %
+            </span>
+            <span className="text-gray-600 ml-1">còn hàng</span>
           </div>
         </Card>
       </div>

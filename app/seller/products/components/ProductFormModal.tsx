@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { X, Plus, Upload, ImageIcon, Trash2 } from "lucide-react";
+import { X, Upload, ImageIcon, Trash2 } from "lucide-react";
 import { Product, ProductFormData } from "@/lib/mockData/products";
 import {
   storeCategoryService,
@@ -46,11 +45,65 @@ export default function ProductFormModal({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [newImageUrl, setNewImageUrl] = useState("");
   const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<
+    Array<{
+      id: number;
+      url: string;
+      isPrimary: boolean;
+    }>
+  >([]);
+  const [loadingImages, setLoadingImages] = useState(false);
+  const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
+  const [isDeletingImages, setIsDeletingImages] = useState(false);
+
+  // Define functions before useEffect to avoid hoisting issues
+  const loadCategories = useCallback(async () => {
+    if (!storeId) return;
+
+    setLoadingCategories(true);
+    try {
+      const data = await storeCategoryService.getByStoreId(storeId);
+      setCategories(data);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  }, [storeId]);
+
+  const loadExistingImages = useCallback(async (productId: number) => {
+    setLoadingImages(true);
+    try {
+      const images = await productImageService.getByProductId(productId);
+      // Sort: primary image first, then by display order
+      const sortedImages = images
+        .sort((a, b) => {
+          if (a.isPrimary && !b.isPrimary) return -1;
+          if (!a.isPrimary && b.isPrimary) return 1;
+          return a.displayOrder - b.displayOrder;
+        })
+        .map((img) => ({
+          id: img.id,
+          url: img.imageUrl.startsWith("http")
+            ? img.imageUrl
+            : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}${
+                img.imageUrl.startsWith("/") ? "" : "/"
+              }${img.imageUrl}`,
+          isPrimary: img.isPrimary,
+        }));
+      setExistingImages(sortedImages);
+    } catch (error) {
+      console.error("Error loading images:", error);
+      setExistingImages([]);
+    } finally {
+      setLoadingImages(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -80,29 +133,23 @@ export default function ProductFormModal({
         });
       }
       setErrors({});
-      setNewImageUrl("");
+      setSelectedFiles([]);
+      setPreviewUrls([]);
+      setImagesToDelete([]);
 
       // Load categories
       if (storeId) {
         loadCategories();
       }
-    }
-  }, [product, isOpen, storeId]);
 
-  const loadCategories = async () => {
-    if (!storeId) return;
-
-    setLoadingCategories(true);
-    try {
-      const data = await storeCategoryService.getByStoreId(storeId);
-      setCategories(data);
-    } catch (error) {
-      console.error("Error loading categories:", error);
-      setCategories([]);
-    } finally {
-      setLoadingCategories(false);
+      // Load existing images if editing product
+      if (product && product.id) {
+        loadExistingImages(Number(product.id));
+      } else {
+        setExistingImages([]);
+      }
     }
-  };
+  }, [product, isOpen, storeId, loadCategories, loadExistingImages]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -131,24 +178,71 @@ export default function ProductFormModal({
       newErrors.categoryId = "Vui lòng chọn danh mục";
     }
 
-    // Check for new product - must have files selected
-    // For edit product - can keep existing images or add new files
-    if (
-      !product &&
-      selectedFiles.length === 0 &&
-      formData.images.length === 0
-    ) {
+    // Check images - for new product: must have new files
+    // For edit product: must have existing images or new files
+    const totalImages =
+      existingImages.length - imagesToDelete.length + selectedFiles.length;
+    if (!product && selectedFiles.length === 0) {
       newErrors.images = "Cần ít nhất một hình ảnh";
+    } else if (product && totalImages === 0) {
+      newErrors.images = "Sản phẩm phải có ít nhất một hình ảnh";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-    onSubmit(formData, selectedFiles);
+
+    // Delete marked images first
+    if (imagesToDelete.length > 0) {
+      setIsDeletingImages(true);
+      try {
+        await Promise.all(
+          imagesToDelete.map((imageId) => productImageService.delete(imageId))
+        );
+        console.log(`Deleted ${imagesToDelete.length} images`);
+      } catch (error) {
+        console.error("Error deleting images:", error);
+        setErrors((prev) => ({
+          ...prev,
+          images: "Đã xảy ra lỗi khi xóa ảnh. Vui lòng thử lại.",
+        }));
+        setIsDeletingImages(false);
+        return;
+      } finally {
+        setIsDeletingImages(false);
+      }
+    }
+
+    // If editing product and has new images, use add-more API
+    if (product && product.id && selectedFiles.length > 0) {
+      setIsDeletingImages(true);
+      try {
+        await productImageService.addMore(Number(product.id), selectedFiles);
+        console.log(`Added ${selectedFiles.length} new images`);
+        // Clear selected files after successful upload
+        setSelectedFiles([]);
+        setPreviewUrls([]);
+      } catch (error) {
+        console.error("Error adding images:", error);
+        setErrors((prev) => ({
+          ...prev,
+          images: "Đã xảy ra lỗi khi thêm ảnh. Vui lòng thử lại.",
+        }));
+        setIsDeletingImages(false);
+        return;
+      } finally {
+        setIsDeletingImages(false);
+      }
+      // Pass empty files array since we already uploaded via add-more API
+      onSubmit(formData, []);
+    } else {
+      // For new product or edit without new images, pass files normally
+      onSubmit(formData, selectedFiles);
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -170,21 +264,9 @@ export default function ProductFormModal({
     setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleAddImage = () => {
-    if (newImageUrl.trim() && !formData.images.includes(newImageUrl.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, newImageUrl.trim()],
-      }));
-      setNewImageUrl("");
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
+  const handleRemoveExistingImage = (imageId: number) => {
+    setImagesToDelete((prev) => [...prev, imageId]);
+    setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
   };
 
   const formatPrice = (price: number) => {
@@ -410,67 +492,90 @@ export default function ProductFormModal({
                   </div>
 
                   {/* Image Preview */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Preview các file mới chọn */}
-                    {previewUrls.map((url, index) => (
-                      <div key={`new-${index}`} className="relative group">
-                        <img
-                          src={url}
-                          alt={`New ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-green-500"
-                        />
-                        <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                          Mới
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveFile(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                          disabled={isLoading}
+                  {loadingImages ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Hiển thị ảnh hiện có từ backend (nếu edit) */}
+                      {existingImages.map((image) => (
+                        <div
+                          key={`existing-${image.id}`}
+                          className={`relative group rounded-lg overflow-hidden ${
+                            image.isPrimary ? "ring-2 ring-blue-500" : ""
+                          }`}
                         >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
-
-                    {/* Hiển thị ảnh hiện tại (nếu edit) */}
-                    {formData.images.map((image, index) => (
-                      <div key={`existing-${index}`} className="relative group">
-                        <img
-                          src={image}
-                          alt={`Product ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src =
-                              "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDlWN0MxOSA1IDIxIDMgMTkgM0g1QzMgMyAzIDUgNSA1SDdWOUg5VjdIMTVWOUgxN1Y3SDE5VjlIMjFaIiBzdHJva2U9IiM5Q0EzQUYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=";
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                          disabled={isLoading}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
-
-                    {previewUrls.length === 0 &&
-                      formData.images.length === 0 && (
-                        <div className="col-span-2 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                          <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                          <p className="text-gray-500 text-sm">
-                            Chưa có hình ảnh nào
-                          </p>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image.url}
+                            alt="Product image"
+                            className="w-full h-32 object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/images/product-placeholder.jpg";
+                            }}
+                          />
+                          {/* Primary Badge */}
+                          {image.isPrimary && (
+                            <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded">
+                              Ảnh Chính
+                            </div>
+                          )}
+                          {/* Delete Button */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveExistingImage(image.id)}
+                            className="absolute top-1 right-1 bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto"
+                            disabled={isLoading}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         </div>
-                      )}
-                  </div>
+                      ))}
+
+                      {/* Preview các file mới chọn */}
+                      {previewUrls.map((url, index) => (
+                        <div
+                          key={`new-${index}`}
+                          className="relative group rounded-lg overflow-hidden border-2 border-green-500"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt={`New ${index + 1}`}
+                            className="w-full h-32 object-cover"
+                          />
+                          <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                            Mới
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveFile(index)}
+                            className="absolute top-1 right-1 bg-red-500 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto"
+                            disabled={isLoading}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+
+                      {/* Empty state */}
+                      {existingImages.length === 0 &&
+                        previewUrls.length === 0 && (
+                          <div className="col-span-2 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                            <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                            <p className="text-gray-500 text-sm">
+                              Chưa có hình ảnh nào
+                            </p>
+                          </div>
+                        )}
+                    </div>
+                  )}
                   {errors.images && (
                     <p className="text-red-500 text-sm mt-1">{errors.images}</p>
                   )}
@@ -545,12 +650,18 @@ export default function ProductFormModal({
               <Button
                 type="submit"
                 className="bg-orange-500 hover:bg-orange-600"
-                disabled={isLoading}
+                disabled={isLoading || isDeletingImages}
               >
-                {isLoading ? (
+                {isLoading || isDeletingImages ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    {product ? "Đang cập nhật..." : "Đang tạo..."}
+                    {isDeletingImages
+                      ? imagesToDelete.length > 0
+                        ? "Đang xóa ảnh..."
+                        : "Đang thêm ảnh..."
+                      : product
+                      ? "Đang cập nhật..."
+                      : "Đang tạo..."}
                   </div>
                 ) : product ? (
                   "Cập Nhật"

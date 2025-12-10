@@ -26,56 +26,56 @@ export function UserStats({ stats, loading = false }: UserStatsProps) {
 
   const statItems = [
     {
-      title: "Total Users",
+      title: "Tổng người dùng",
       value: stats.total_users.toLocaleString(),
       icon: "👥",
       color: "text-blue-600",
       bgColor: "bg-blue-50",
     },
     {
-      title: "Active Users",
+      title: "Người dùng hoạt động",
       value: stats.active_users.toLocaleString(),
       icon: "✅",
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
-      title: "Total Sellers",
+      title: "Tổng người bán",
       value: stats.total_sellers.toLocaleString(),
       icon: "🏪",
       color: "text-purple-600",
       bgColor: "bg-purple-50",
     },
     {
-      title: "Pending Sellers",
+      title: "Người bán chờ duyệt",
       value: stats.pending_sellers.toLocaleString(),
       icon: "⏳",
       color: "text-yellow-600",
       bgColor: "bg-yellow-50",
     },
     {
-      title: "Active Sellers",
+      title: "Người bán hoạt động",
       value: stats.active_sellers.toLocaleString(),
       icon: "🟢",
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
     {
-      title: "Banned Sellers",
+      title: "Người bán bị cấm",
       value: stats.banned_sellers.toLocaleString(),
       icon: "🚫",
       color: "text-red-600",
       bgColor: "bg-red-50",
     },
     {
-      title: "New Users This Month",
+      title: "Người dùng mới tháng này",
       value: stats.new_users_this_month.toLocaleString(),
       icon: "📈",
       color: "text-indigo-600",
       bgColor: "bg-indigo-50",
     },
     {
-      title: "New Sellers This Month",
+      title: "Người bán mới tháng này",
       value: stats.new_sellers_this_month.toLocaleString(),
       icon: "🆕",
       color: "text-orange-600",
@@ -106,13 +106,13 @@ export function UserStats({ stats, loading = false }: UserStatsProps) {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-700">
-                User Overview
+                Tổng quan người dùng
               </h3>
               <p className="text-3xl font-bold text-blue-600 mt-2">
                 {stats.total_users.toLocaleString()}
               </p>
               <p className="text-sm text-gray-600 mt-1">
-                {activeUserPercentage}% Active (
+                {activeUserPercentage}% Hoạt động (
                 {stats.active_users.toLocaleString()})
               </p>
             </div>
@@ -124,13 +124,13 @@ export function UserStats({ stats, loading = false }: UserStatsProps) {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-700">
-                Seller Overview
+                Tổng quan người bán
               </h3>
               <p className="text-3xl font-bold text-purple-600 mt-2">
                 {stats.total_sellers.toLocaleString()}
               </p>
               <p className="text-sm text-gray-600 mt-1">
-                {activeSellerPercentage}% Active (
+                {activeSellerPercentage}% Hoạt động (
                 {stats.active_sellers.toLocaleString()})
               </p>
             </div>
@@ -141,14 +141,12 @@ export function UserStats({ stats, loading = false }: UserStatsProps) {
         <Card className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-l-yellow-500">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-700">
-                Pending Approval
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-700">Chờ duyệt</h3>
               <p className="text-3xl font-bold text-yellow-600 mt-2">
                 {stats.pending_sellers.toLocaleString()}
               </p>
               <p className="text-sm text-gray-600 mt-1">
-                {pendingSellerPercentage}% of sellers
+                {pendingSellerPercentage}% người bán
               </p>
             </div>
             <div className="text-4xl">⏳</div>
@@ -181,11 +179,11 @@ export function UserStats({ stats, loading = false }: UserStatsProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-700 mb-4">
-            This Month's Growth
+            Tăng trưởng tháng này
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">New Users</span>
+              <span className="text-gray-600">Người dùng mới</span>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-green-600">
                   +{stats.new_users_this_month}
@@ -202,7 +200,7 @@ export function UserStats({ stats, loading = false }: UserStatsProps) {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">New Sellers</span>
+              <span className="text-gray-600">Người bán mới</span>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-blue-600">
                   +{stats.new_sellers_this_month}
@@ -224,11 +222,11 @@ export function UserStats({ stats, loading = false }: UserStatsProps) {
 
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-700 mb-4">
-            Seller Health
+            Tình trạng người bán
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">Active Sellers</span>
+              <span className="text-gray-600">Người bán hoạt động</span>
               <div className="flex items-center gap-2">
                 <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
@@ -242,7 +240,7 @@ export function UserStats({ stats, loading = false }: UserStatsProps) {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">Pending Approval</span>
+              <span className="text-gray-600">Chờ duyệt</span>
               <div className="flex items-center gap-2">
                 <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
@@ -256,7 +254,7 @@ export function UserStats({ stats, loading = false }: UserStatsProps) {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">Banned Sellers</span>
+              <span className="text-gray-600">Người bán bị cấm</span>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-red-600">
                   {stats.banned_sellers}
