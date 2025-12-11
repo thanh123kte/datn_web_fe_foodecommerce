@@ -125,6 +125,13 @@ class AuthApiService {
     localStorage.setItem("user_info", JSON.stringify(loginResponse.user));
   }
 
+  // Lưu store info vào localStorage
+  saveStoreInfo(storeId?: string | number) {
+    if (storeId !== undefined && storeId !== null) {
+      localStorage.setItem("store_id", String(storeId));
+    }
+  }
+
   // Lưu backend user info vào localStorage
   saveBackendUserSession(user: BackendUser, token?: string) {
     if (token) {
@@ -138,6 +145,7 @@ class AuthApiService {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("user_info");
     localStorage.removeItem("backend_user");
+    localStorage.removeItem("store_id");
   }
 
   // Lấy user info từ localStorage
@@ -155,6 +163,11 @@ class AuthApiService {
   // Lấy token từ localStorage
   getAuthToken() {
     return localStorage.getItem("auth_token");
+  }
+
+  // Lấy store_id từ localStorage
+  getStoreId(): string | null {
+    return localStorage.getItem("store_id");
   }
 }
 

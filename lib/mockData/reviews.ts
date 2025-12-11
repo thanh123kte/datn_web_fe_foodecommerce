@@ -399,10 +399,7 @@ export const reviewsAPI = {
   },
 };
 
-// Utility functions
-export const formatRating = (rating: number): string => {
-  return "★".repeat(rating) + "☆".repeat(5 - rating);
-};
+
 
 export const getRatingColor = (rating: number): string => {
   if (rating >= 4) return "text-green-600";

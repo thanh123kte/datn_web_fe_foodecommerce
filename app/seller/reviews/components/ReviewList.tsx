@@ -4,13 +4,8 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  StoreReview,
-  formatRating,
-  getRatingColor,
-  getReviewSentiment,
-  formatRelativeTime,
-} from "@/lib/mockData/reviews";
+import { StoreReview } from "@/lib/services/storeReviewService";
+import { buildAbsoluteUrl } from "@/lib/utils";
 import {
   Star,
   MessageCircle,
@@ -18,7 +13,6 @@ import {
   Edit,
   Trash2,
   Image as ImageIcon,
-  User,
   Calendar,
   ShoppingBag,
 } from "lucide-react";
@@ -40,6 +34,26 @@ interface ReviewItemProps {
   onViewDetails?: (review: StoreReview) => void;
 }
 
+const getReviewSentiment = (rating: number): string => {
+  if (rating >= 4) return "positive";
+  if (rating === 3) return "neutral";
+  return "negative";
+};
+
+const formatRelativeTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  if (diffInDays === 0) return "Hôm nay";
+  if (diffInDays === 1) return "Hôm qua";
+  if (diffInDays < 7) return `${diffInDays} ngày trước`;
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} tuần trước`;
+  if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} tháng trước`;
+  return `${Math.floor(diffInDays / 365)} năm trước`;
+};
+
 const ReviewItem: React.FC<ReviewItemProps> = ({
   review,
   onReplyToReview,
@@ -50,6 +64,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
   const sentiment = getReviewSentiment(review.rating);
   const [showFullComment, setShowFullComment] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const commentPreview =
     review.comment.length > 150
@@ -75,52 +90,61 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-            {review.customer_avatar ? (
+            {review.customerAvatar && !avatarError ? (
               <img
-                src={review.customer_avatar}
-                alt={review.customer_name}
+                src={buildAbsoluteUrl(review.customerAvatar)}
+                alt={review.customerName}
                 className="w-full h-full object-cover"
-                onError={() => setImageError(true)}
+                onError={() => setAvatarError(true)}
               />
             ) : (
-              <User className="h-6 w-6 text-gray-500" />
+              <img
+                src="/images/default-avatar.png"
+                alt={review.customerName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    parent.innerHTML =
+                      '<svg class="h-6 w-6 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+                  }
+                }}
+              />
             )}
           </div>
 
           <div>
             <h4 className="font-semibold text-gray-900">
-              {review.customer_name}
+              {review.customerName}
             </h4>
             <div className="flex items-center gap-3 text-sm text-gray-600">
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                <span>{formatRelativeTime(review.created_at)}</span>
+                <span>{formatRelativeTime(review.createdAt)}</span>
               </div>
               <div className="flex items-center gap-1">
                 <ShoppingBag className="h-4 w-4" />
-                <span>Order #{review.order_id}</span>
+                <span>Đơn hàng #{review.orderId}</span>
               </div>
-              <span>•</span>
-              <span>
-                {new Intl.NumberFormat("vi-VN", {
-                  style: "currency",
-                  currency: "VND",
-                }).format(review.order_total)}
-              </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <Badge className={`border ${getSentimentColor(sentiment)}`}>
-            {sentiment}
+            {sentiment === "positive"
+              ? "Tích cực"
+              : sentiment === "neutral"
+              ? "Trung lập"
+              : "Tiêu cực"}
           </Badge>
-          {!review.is_responded && (
+          {!review.reply && (
             <Badge
               variant="outline"
               className="bg-orange-50 text-orange-700 border-orange-200"
             >
-              Needs Response
+              Cần phản hồi
             </Badge>
           )}
         </div>
@@ -134,7 +158,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
               key={star}
               className={`h-5 w-5 ${
                 star <= review.rating
-                  ? `${getRatingColor(review.rating)} fill-current`
+                  ? "text-yellow-500 fill-current"
                   : "text-gray-300"
               }`}
             />
@@ -142,9 +166,6 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
         </div>
         <span className="text-lg font-semibold text-gray-900">
           {review.rating}.0
-        </span>
-        <span className="text-sm text-gray-600">
-          {formatRating(review.rating)}
         </span>
       </div>
 
@@ -157,17 +178,17 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
               onClick={() => setShowFullComment(!showFullComment)}
               className="ml-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
             >
-              {showFullComment ? "Show less" : "Show more"}
+              {showFullComment ? "Thu gọn" : "Xem thêm"}
             </button>
           )}
         </p>
 
         {/* Review Image */}
-        {review.image_url && !imageError && (
+        {review.imageUrl && !imageError && (
           <div className="mt-3">
             <img
-              src={review.image_url}
-              alt="Review image"
+              src={buildAbsoluteUrl(review.imageUrl)}
+              alt="Ảnh đánh giá"
               className="w-32 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => onViewDetails?.(review)}
               onError={() => setImageError(true)}
@@ -177,21 +198,23 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
       </div>
 
       {/* Store Response */}
-      {review.is_responded && review.response && (
+      {review.reply && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-900">
-                Store Response
+                Phản hồi của cửa hàng
               </span>
             </div>
-            <span className="text-xs text-blue-600">
-              {formatRelativeTime(review.response.created_at)}
-            </span>
+            {review.repliedAt && (
+              <span className="text-xs text-blue-600">
+                {formatRelativeTime(review.repliedAt)}
+              </span>
+            )}
           </div>
           <p className="text-blue-800 text-sm leading-relaxed">
-            {review.response.response_text}
+            {review.reply}
           </p>
         </div>
       )}
@@ -199,14 +222,14 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200">
         <div className="flex items-center gap-2">
-          {!review.is_responded ? (
+          {!review.reply ? (
             <Button
               size="sm"
               onClick={() => onReplyToReview(review)}
               className="flex items-center gap-2"
             >
               <Reply className="h-4 w-4" />
-              Reply
+              Phản hồi
             </Button>
           ) : (
             <div className="flex items-center gap-2">
@@ -217,7 +240,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
                 className="flex items-center gap-2"
               >
                 <Edit className="h-4 w-4" />
-                Edit Response
+                Chỉnh sửa phản hồi
               </Button>
               <Button
                 variant="outline"
@@ -226,17 +249,17 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
                 className="flex items-center gap-2 text-red-600 hover:text-red-700"
               >
                 <Trash2 className="h-4 w-4" />
-                Delete Response
+                Xóa phản hồi
               </Button>
             </div>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-          {review.image_url && (
+          {review.imageUrl && (
             <Badge variant="outline" className="text-xs">
               <ImageIcon className="h-3 w-3 mr-1" />
-              Has Image
+              Có ảnh
             </Badge>
           )}
           <Button
@@ -245,7 +268,7 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
             onClick={() => onViewDetails?.(review)}
             className="text-blue-600 hover:text-blue-700"
           >
-            View Details
+            Xem chi tiết
           </Button>
         </div>
       </div>
@@ -297,12 +320,12 @@ export const ReviewList: React.FC<ReviewListProps> = ({
       <Card className="p-12 text-center">
         <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          No Reviews Found
+          Không tìm thấy đánh giá
         </h3>
         <p className="text-gray-600 mb-4">
-          No reviews match your current filters.
+          Không có đánh giá nào phù hợp với bộ lọc hiện tại.
         </p>
-        <Button variant="outline">Clear Filters</Button>
+        <Button variant="outline">Xóa bộ lọc</Button>
       </Card>
     );
   }

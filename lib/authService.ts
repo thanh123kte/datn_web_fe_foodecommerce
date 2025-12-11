@@ -12,6 +12,7 @@ import {
 } from "firebase/auth";
 import { auth } from "./firebase";
 import { authApiService } from "./services/authApiService";
+import { storeService } from "./services/storeService";
 
 export interface SignUpData {
   email: string;
@@ -59,6 +60,22 @@ class AuthService {
       // Lưu thông tin user vào localStorage
       authApiService.saveUserSession(loginResponse);
 
+      // Lấy và lưu store_id nếu user là seller
+      if (loginResponse.user.role === "SELLER") {
+        try {
+          const store = await storeService.getByOwner(loginResponse.user.id);
+          if (store?.id) {
+            authApiService.saveStoreInfo(store.id);
+          }
+        } catch (error) {
+          // Store chưa tồn tại hoặc có lỗi, bỏ qua
+          console.warn(
+            "[AuthService] Không thể lấy store info (Google):",
+            error
+          );
+        }
+      }
+
       return result;
     } catch (error) {
       throw error;
@@ -84,6 +101,19 @@ class AuthService {
 
       // Save user session data to localStorage
       authApiService.saveUserSession(loginResponse);
+
+      // Lấy và lưu store_id nếu user là seller
+      if (loginResponse.user.role === "SELLER") {
+        try {
+          const store = await storeService.getByOwner(loginResponse.user.id);
+          if (store?.id) {
+            authApiService.saveStoreInfo(store.id);
+          }
+        } catch (error) {
+          // Store chưa tồn tại hoặc có lỗi, bỏ qua
+          console.warn("[AuthService] Không thể lấy store info:", error);
+        }
+      }
 
       return result;
     } catch (error) {

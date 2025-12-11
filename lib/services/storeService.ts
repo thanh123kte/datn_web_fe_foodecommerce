@@ -58,17 +58,23 @@ class StoreService {
   }
 
   // Lấy stores theo owner ID
-  async getByOwner(ownerId: string): Promise<Store[]> {
-    const response = await axiosInstance.get(
-      `${this.basePath}/owner/${ownerId}`
-    );
-    return response.data;
-  }
-
-  // Lấy store đầu tiên của owner (cho seller có 1 store)
-  async getFirstStoreByOwner(ownerId: string): Promise<Store | null> {
-    const stores = await this.getByOwner(ownerId);
-    return stores.length > 0 ? stores[0] : null;
+  async getByOwner(ownerId: string): Promise<Store | null> {
+    try {
+      const response = await axiosInstance.get(
+        `${this.basePath}/owner/${ownerId}`
+      );
+      // Backend giờ trả về một store object, không phải array
+      return response.data;
+    } catch (error) {
+      // Nếu không tìm thấy store (404), trả về null
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 404) {
+          return null;
+        }
+      }
+      throw error;
+    }
   }
 
   // Cập nhật store

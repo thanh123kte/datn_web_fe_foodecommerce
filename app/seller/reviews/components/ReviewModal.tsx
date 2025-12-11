@@ -5,17 +5,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  StoreReview,
-  formatRating,
-  getRatingColor,
-  getReviewSentiment,
-  formatRelativeTime,
-} from "@/lib/mockData/reviews";
+import { StoreReview } from "@/lib/services/storeReviewService";
+import { buildAbsoluteUrl } from "@/lib/utils";
 import {
   X,
   Star,
-  User,
   Calendar,
   ShoppingBag,
   MessageCircle,
@@ -24,6 +18,26 @@ import {
   Trash2,
   Image as ImageIcon,
 } from "lucide-react";
+
+const getReviewSentiment = (rating: number): string => {
+  if (rating >= 4) return "positive";
+  if (rating === 3) return "neutral";
+  return "negative";
+};
+
+const formatRelativeTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  if (diffInDays === 0) return "Hôm nay";
+  if (diffInDays === 1) return "Hôm qua";
+  if (diffInDays < 7) return `${diffInDays} ngày trước`;
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} tuần trước`;
+  if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} tháng trước`;
+  return `${Math.floor(diffInDays / 365)} năm trước`;
+};
 
 interface ReviewModalProps {
   review: StoreReview | null;
@@ -52,10 +66,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
     mode
   );
   const [imageError, setImageError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   React.useEffect(() => {
-    if (review && currentMode === "edit" && review.response) {
-      setResponseText(review.response.response_text);
+    if (review && currentMode === "edit" && review.reply) {
+      setResponseText(review.reply);
     } else {
       setResponseText("");
     }
@@ -86,11 +101,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   };
 
   const handleDeleteResponse = async () => {
-    if (!review || !review.response) return;
+    if (!review || !review.reply) return;
 
     if (
       confirm(
-        "Are you sure you want to delete this response? This action cannot be undone."
+        "Bạn có chắc chắn muốn xóa phản hồi này? Hành động này không thể hoàn tác."
       )
     ) {
       setIsSubmitting(true);
@@ -129,10 +144,10 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
             {currentMode === "reply"
-              ? "Reply to Review"
+              ? "Phản hồi đánh giá"
               : currentMode === "edit"
-              ? "Edit Response"
-              : "Review Details"}
+              ? "Chỉnh sửa phản hồi"
+              : "Chi tiết đánh giá"}
           </h2>
           <Button
             variant="ghost"
@@ -149,27 +164,39 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           {/* Customer Info */}
           <div className="flex items-center gap-4 mb-6">
             <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-              {review.customer_avatar && !imageError ? (
+              {review.customerAvatar && !avatarError ? (
                 <img
-                  src={review.customer_avatar}
-                  alt={review.customer_name}
+                  src={buildAbsoluteUrl(review.customerAvatar)}
+                  alt={review.customerName}
                   className="w-full h-full object-cover"
-                  onError={() => setImageError(true)}
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
-                <User className="h-8 w-8 text-gray-500" />
+                <img
+                  src="/images/default-avatar.png"
+                  alt={review.customerName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      parent.innerHTML =
+                        '<svg class="h-8 w-8 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+                    }
+                  }}
+                />
               )}
             </div>
 
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-900">
-                {review.customer_name}
+                {review.customerName}
               </h3>
               <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
                   <span>
-                    {new Date(review.created_at).toLocaleDateString("vi-VN", {
+                    {new Date(review.createdAt).toLocaleDateString("vi-VN", {
                       weekday: "long",
                       year: "numeric",
                       month: "long",
@@ -183,28 +210,25 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                 <div className="flex items-center gap-1">
                   <ShoppingBag className="h-4 w-4" />
-                  <span>Order #{review.order_id}</span>
+                  <span>Đơn hàng #{review.orderId}</span>
                 </div>
-                <span>•</span>
-                <span>
-                  {new Intl.NumberFormat("vi-VN", {
-                    style: "currency",
-                    currency: "VND",
-                  }).format(review.order_total)}
-                </span>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <Badge className={`border ${getSentimentColor(sentiment)}`}>
-                {sentiment}
+                {sentiment === "positive"
+                  ? "Tích cực"
+                  : sentiment === "neutral"
+                  ? "Trung lập"
+                  : "Tiêu cực"}
               </Badge>
-              {!review.is_responded && (
+              {!review.reply && (
                 <Badge
                   variant="outline"
                   className="bg-orange-50 text-orange-700 border-orange-200"
                 >
-                  Needs Response
+                  Cần phản hồi
                 </Badge>
               )}
             </div>
@@ -226,14 +250,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                   key={star}
                   className={`h-6 w-6 ${
                     star <= review.rating
-                      ? `${getRatingColor(review.rating)} fill-current`
+                      ? "text-yellow-500 fill-current"
                       : "text-gray-300"
                   }`}
                 />
               ))}
-              <span className="ml-2 text-sm text-gray-600">
-                {formatRating(review.rating)}
-              </span>
             </div>
           </div>
 
@@ -250,15 +271,15 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           </div>
 
           {/* Review Image */}
-          {review.image_url && !imageError && (
+          {review.imageUrl && !imageError && (
             <div className="mb-6">
               <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                Review Image
+                Ảnh đánh giá
               </Label>
               <div className="relative">
                 <img
-                  src={review.image_url}
-                  alt="Review image"
+                  src={buildAbsoluteUrl(review.imageUrl)}
+                  alt="Ảnh đánh giá"
                   className="w-full max-w-md h-auto rounded-lg border border-gray-200"
                   onError={() => setImageError(true)}
                 />
@@ -267,11 +288,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           )}
 
           {/* Existing Response */}
-          {review.is_responded && review.response && currentMode === "view" && (
+          {review.reply && currentMode === "view" && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-sm font-medium text-gray-700">
-                  Your Response
+                  Phản hồi của bạn
                 </Label>
                 <div className="flex items-center gap-2">
                   <Button
@@ -281,7 +302,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                     className="flex items-center gap-2"
                   >
                     <Edit className="h-4 w-4" />
-                    Edit
+                    Chỉnh sửa
                   </Button>
                   <Button
                     variant="outline"
@@ -291,7 +312,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                     className="flex items-center gap-2 text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />
-                    Delete
+                    Xóa
                   </Button>
                 </div>
               </div>
@@ -299,14 +320,16 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                 <div className="flex items-center gap-2 mb-2">
                   <MessageCircle className="h-4 w-4 text-blue-600" />
                   <span className="text-sm font-medium text-blue-900">
-                    Store Response
+                    Phản hồi của cửa hàng
                   </span>
-                  <span className="text-xs text-blue-600 ml-auto">
-                    {formatRelativeTime(review.response.created_at)}
-                  </span>
+                  {review.repliedAt && (
+                    <span className="text-xs text-blue-600 ml-auto">
+                      {formatRelativeTime(review.repliedAt)}
+                    </span>
+                  )}
                 </div>
                 <p className="text-blue-800 leading-relaxed whitespace-pre-wrap">
-                  {review.response.response_text}
+                  {review.reply}
                 </p>
               </Card>
             </div>
@@ -318,13 +341,13 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               <div>
                 <Label className="text-sm font-medium text-gray-700 mb-3 block">
                   {currentMode === "edit"
-                    ? "Update Your Response"
-                    : "Your Response"}
+                    ? "Cập nhật phản hồi"
+                    : "Phản hồi của bạn"}
                 </Label>
                 <textarea
                   value={responseText}
                   onChange={(e) => setResponseText(e.target.value)}
-                  placeholder={`Write a thoughtful response to ${review.customer_name}'s review...`}
+                  placeholder={`Viết phản hồi chân thành cho đánh giá của ${review.customerName}...`}
                   rows={6}
                   className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled={isSubmitting}
@@ -332,7 +355,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                 />
                 <div className="flex items-center justify-between mt-2 text-sm text-gray-600">
                   <span>
-                    Be professional and address the customer's concerns
+                    Hãy chuyên nghiệp và giải quyết mối quan ngại của khách hàng
                   </span>
                   <span>{responseText.length}/1000</span>
                 </div>
@@ -367,7 +390,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           )}
 
           {/* Action Buttons for View Mode */}
-          {currentMode === "view" && !review.is_responded && (
+          {currentMode === "view" && !review.reply && (
             <div className="flex items-center gap-3 pt-6 border-t border-gray-200">
               <Button
                 onClick={() => setCurrentMode("reply")}

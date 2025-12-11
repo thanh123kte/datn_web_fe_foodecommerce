@@ -53,8 +53,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Load store của user (cho SELLER)
   const loadUserStore = useCallback(async (userId: string) => {
     try {
-      const store = await storeService.getFirstStoreByOwner(userId);
+      // Kiểm tra store_id trong localStorage trước
+      const cachedStoreId = authApiService.getStoreId();
+
+      if (cachedStoreId) {
+        // Nếu có store_id trong cache, dùng luôn để lấy thông tin store
+        try {
+          const store = await storeService.getById(Number(cachedStoreId));
+          setCurrentStore(store);
+          return;
+        } catch (error) {
+          // Nếu store_id không hợp lệ, xóa khỏi cache và tiếp tục fetch theo owner
+          console.warn("Cached store_id không hợp lệ, đang làm mới...", error);
+        }
+      }
+
+      // Nếu không có cache hoặc cache không hợp lệ, fetch theo owner ID
+      const store = await storeService.getByOwner(userId);
       setCurrentStore(store);
+
+      // Lưu store_id vào localStorage để dùng lần sau
+      if (store?.id) {
+        authApiService.saveStoreInfo(store.id);
+      }
     } catch {
       setCurrentStore(null);
     }
@@ -79,12 +100,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [loadUserStore]);
 
   // Refresh store information
-  const refreshStore = async () => {
+  const refreshStore = useCallback(async () => {
     const userInfo = authApiService.getCurrentUser();
     if (userInfo && userInfo.role === "SELLER" && userInfo.id) {
       await loadUserStore(userInfo.id);
     }
-  };
+  }, [loadUserStore]);
 
   useEffect(() => {
     try {
@@ -116,6 +137,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       await authService.signIn(data, requiredRole);
+
+      // Reload user info và store sau khi đăng nhập thành công
+      await loadUserInfo();
     } catch (error) {
       throw error;
     } finally {
@@ -127,6 +151,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       await authService.signInWithGoogle();
+
+      // Reload user info và store sau khi đăng nhập thành công
+      await loadUserInfo();
     } catch (error) {
       throw error;
     } finally {

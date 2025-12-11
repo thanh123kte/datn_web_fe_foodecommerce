@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ReviewFilters } from "@/lib/mockData/reviews";
+import { ReviewFilters } from "@/lib/services/storeReviewService";
 import {
   Filter,
   Search,
@@ -14,8 +14,7 @@ import {
   Calendar,
   MessageCircle,
   RefreshCw,
-  SortAsc,
-  SortDesc,
+  ChevronDown,
 } from "lucide-react";
 
 interface ReviewFiltersProps {
@@ -33,75 +32,31 @@ export const ReviewFiltersComponent: React.FC<ReviewFiltersProps> = ({
   loading = false,
   totalReviews = 0,
 }) => {
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchTerm, setSearchTerm] = useState(filters.searchTerm || "");
 
   // Quick filter presets
   const ratingFilters = [
-    { stars: [5], label: "5 Stars", color: "bg-green-100 text-green-800" },
-    { stars: [4, 5], label: "4+ Stars", color: "bg-blue-100 text-blue-800" },
-    { stars: [3], label: "3 Stars", color: "bg-yellow-100 text-yellow-800" },
-    { stars: [1, 2], label: "1-2 Stars", color: "bg-red-100 text-red-800" },
+    { stars: [5], label: "5 sao", value: "5" },
+    { stars: [4, 5], label: "4+ sao", value: "4+" },
+    { stars: [3], label: "3 sao", value: "3" },
+    { stars: [1, 2], label: "1-2 sao", value: "1-2" },
   ];
 
   const responseFilters = [
-    { value: true, label: "Responded", color: "bg-green-100 text-green-800" },
-    { value: false, label: "Pending", color: "bg-orange-100 text-orange-800" },
+    { value: true, label: "Đã phản hồi", color: "bg-green-100 text-green-800" },
+    {
+      value: false,
+      label: "Chưa phản hồi",
+      color: "bg-orange-100 text-orange-800",
+    },
   ];
 
   const sortOptions = [
-    {
-      value: "newest",
-      label: "Newest First",
-      icon: <SortDesc className="h-4 w-4" />,
-    },
-    {
-      value: "oldest",
-      label: "Oldest First",
-      icon: <SortAsc className="h-4 w-4" />,
-    },
-    {
-      value: "highest_rating",
-      label: "Highest Rating",
-      icon: <Star className="h-4 w-4" />,
-    },
-    {
-      value: "lowest_rating",
-      label: "Lowest Rating",
-      icon: <Star className="h-4 w-4" />,
-    },
+    { value: "newest", label: "Mới nhất" },
+    { value: "oldest", label: "Cũ nhất" },
+    { value: "highest", label: "Đánh giá cao nhất" },
+    { value: "lowest", label: "Đánh giá thấp nhất" },
   ];
-
-  // Date presets
-  const datePresets = useMemo(() => {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const lastWeek = new Date(today);
-    lastWeek.setDate(lastWeek.getDate() - 7);
-
-    const lastMonth = new Date(today);
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-
-    return [
-      {
-        label: "Today",
-        startDate: today.toISOString().split("T")[0],
-        endDate: today.toISOString().split("T")[0],
-      },
-      {
-        label: "Last 7 days",
-        startDate: lastWeek.toISOString().split("T")[0],
-        endDate: today.toISOString().split("T")[0],
-      },
-      {
-        label: "Last 30 days",
-        startDate: lastMonth.toISOString().split("T")[0],
-        endDate: today.toISOString().split("T")[0],
-      },
-    ];
-  }, []);
 
   const handleSearchSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -133,18 +88,6 @@ export const ReviewFiltersComponent: React.FC<ReviewFiltersProps> = ({
       });
     },
     [filters.hasResponse, onFiltersChange]
-  );
-
-  const handleDatePreset = useCallback(
-    (preset: (typeof datePresets)[0]) => {
-      onFiltersChange({
-        dateRange: {
-          startDate: preset.startDate,
-          endDate: preset.endDate,
-        },
-      });
-    },
-    [onFiltersChange]
   );
 
   const handleDateRangeChange = useCallback(
@@ -202,13 +145,6 @@ export const ReviewFiltersComponent: React.FC<ReviewFiltersProps> = ({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-            >
-              {showAdvanced ? "Hide" : "Show"} Advanced
-            </Button>
             {onRefresh && (
               <Button
                 variant="outline"
@@ -219,12 +155,12 @@ export const ReviewFiltersComponent: React.FC<ReviewFiltersProps> = ({
                 <RefreshCw
                   className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
                 />
-                Refresh
+                Làm mới
               </Button>
             )}
             {activeFiltersCount > 0 && (
               <Button variant="outline" size="sm" onClick={clearAllFilters}>
-                Clear All
+                Xóa bộ lọc
               </Button>
             )}
           </div>
@@ -233,10 +169,10 @@ export const ReviewFiltersComponent: React.FC<ReviewFiltersProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Search */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Search Reviews</Label>
+            <Label className="text-sm font-medium">Tìm kiếm</Label>
             <form onSubmit={handleSearchSubmit} className="flex gap-2">
               <Input
-                placeholder="Search reviews or customers..."
+                placeholder="Tìm đánh giá hoặc khách hàng..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
@@ -247,78 +183,114 @@ export const ReviewFiltersComponent: React.FC<ReviewFiltersProps> = ({
             </form>
           </div>
 
-          {/* Sort Options */}
+          {/* Sort Options - Dropdown */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Sort By</Label>
-            <div className="flex gap-2 flex-wrap">
-              {sortOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={
-                    filters.sortBy === option.value ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() =>
-                    handleSortChange(option.value as ReviewFilters["sortBy"])
-                  }
-                  className="flex items-center gap-2"
-                >
-                  {option.icon}
-                  <span className="hidden sm:inline">{option.label}</span>
-                </Button>
-              ))}
+            <Label className="text-sm font-medium">Sắp xếp theo</Label>
+            <div className="relative">
+              <select
+                value={filters.sortBy || "newest"}
+                onChange={(e) =>
+                  handleSortChange(e.target.value as ReviewFilters["sortBy"])
+                }
+                className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-10"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
             </div>
           </div>
 
-          {/* Quick Stats */}
+          {/* Rating Filter - Dropdown */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Quick Stats</Label>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4" />
-                <span>{totalReviews} Total</span>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {filters.sortBy} sort
-              </Badge>
+            <Label className="text-sm font-medium">Lọc theo đánh giá</Label>
+            <div className="relative">
+              <select
+                value={
+                  filters.rating
+                    ? ratingFilters.find(
+                        (f) =>
+                          f.stars.length === filters.rating?.length &&
+                          f.stars.every((s) => filters.rating?.includes(s))
+                      )?.value || ""
+                    : ""
+                }
+                onChange={(e) => {
+                  const selected = ratingFilters.find(
+                    (f) => f.value === e.target.value
+                  );
+                  if (selected) {
+                    handleRatingFilter(selected.stars);
+                  } else {
+                    onFiltersChange({ rating: undefined });
+                  }
+                }}
+                className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-10"
+              >
+                <option value="">Tất cả đánh giá</option>
+                {ratingFilters.map((filter) => (
+                  <option key={filter.value} value={filter.value}>
+                    {filter.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+            </div>
+          </div>
+        </div>
+
+        {/* Date Range Filter */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <Label className="text-sm font-medium mb-3 block">
+            Lọc theo ngày
+          </Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label
+                htmlFor="startDate"
+                className="text-xs text-gray-600 mb-1 block"
+              >
+                Từ ngày
+              </Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={filters.dateRange?.startDate || ""}
+                onChange={(e) =>
+                  handleDateRangeChange("startDate", e.target.value)
+                }
+                className="w-full"
+              />
+            </div>
+            <div>
+              <Label
+                htmlFor="endDate"
+                className="text-xs text-gray-600 mb-1 block"
+              >
+                Đến ngày
+              </Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={filters.dateRange?.endDate || ""}
+                onChange={(e) =>
+                  handleDateRangeChange("endDate", e.target.value)
+                }
+                className="w-full"
+              />
             </div>
           </div>
         </div>
 
         {/* Quick Filters */}
         <div className="mt-6 space-y-4">
-          {/* Rating Filters */}
-          <div>
-            <Label className="text-sm font-medium mb-3 block">
-              Filter by Rating
-            </Label>
-            <div className="flex gap-2 flex-wrap">
-              {ratingFilters.map((filter, index) => {
-                const isActive =
-                  filters.rating &&
-                  filters.rating.length === filter.stars.length &&
-                  filters.rating.every((r) => filter.stars.includes(r));
-
-                return (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRatingFilter(filter.stars)}
-                    className={isActive ? filter.color : ""}
-                  >
-                    <Star className="h-4 w-4 mr-1" />
-                    {filter.label}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Response Status Filters */}
           <div>
             <Label className="text-sm font-medium mb-3 block">
-              Response Status
+              Trạng thái phản hồi
             </Label>
             <div className="flex gap-2 flex-wrap">
               {responseFilters.map((filter) => {
@@ -341,67 +313,6 @@ export const ReviewFiltersComponent: React.FC<ReviewFiltersProps> = ({
           </div>
         </div>
       </Card>
-
-      {/* Advanced Filters */}
-      {showAdvanced && (
-        <Card className="p-6">
-          <h4 className="text-md font-semibold mb-4 flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Date Range Filter
-          </h4>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Custom Date Range</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="startDate" className="text-xs text-gray-600">
-                    From
-                  </Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={filters.dateRange?.startDate || ""}
-                    onChange={(e) =>
-                      handleDateRangeChange("startDate", e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="endDate" className="text-xs text-gray-600">
-                    To
-                  </Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={filters.dateRange?.endDate || ""}
-                    onChange={(e) =>
-                      handleDateRangeChange("endDate", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Quick Date Presets</Label>
-              <div className="flex gap-2 flex-wrap">
-                {datePresets.map((preset, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDatePreset(preset)}
-                    className="text-xs"
-                  >
-                    {preset.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
 
       {/* Active Filters Summary */}
       {activeFiltersCount > 0 && (

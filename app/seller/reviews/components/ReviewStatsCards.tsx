@@ -2,12 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  ReviewStats,
-  formatRating,
-  getRatingColor,
-  getRatingText,
-} from "@/lib/mockData/reviews";
+import { ReviewStats } from "@/lib/services/storeReviewService";
 import {
   Star,
   MessageCircle,
@@ -33,6 +28,18 @@ interface StatCard {
     variant: "default" | "secondary" | "destructive" | "outline";
   };
 }
+
+const getRatingColor = (rating: number): string => {
+  return "text-yellow-500";
+};
+
+const getRatingText = (rating: number): string => {
+  if (rating >= 4.5) return "Xuất sắc";
+  if (rating >= 4) return "Rất tốt";
+  if (rating >= 3) return "Tốt";
+  if (rating >= 2) return "Trung bình";
+  return "Cần cải thiện";
+};
 
 export const ReviewStatsCards: React.FC<ReviewStatsCardsProps> = ({
   stats,
@@ -61,27 +68,23 @@ export const ReviewStatsCards: React.FC<ReviewStatsCardsProps> = ({
 
   const statCards: StatCard[] = [
     {
-      title: "Average Rating",
+      title: "Đánh giá trung bình",
       value: stats.averageRating.toFixed(1),
       subtitle: getRatingText(stats.averageRating),
       icon: <Star className="h-5 w-5" />,
       color: "bg-yellow-500",
-      badge: {
-        text: formatRating(Math.round(stats.averageRating)),
-        variant: "outline",
-      },
     },
     {
-      title: "Total Reviews",
+      title: "Tổng đánh giá",
       value: stats.totalReviews.toString(),
-      subtitle: "customer feedback",
+      subtitle: "phản hồi từ khách hàng",
       icon: <MessageCircle className="h-5 w-5" />,
       color: "bg-blue-500",
     },
     {
-      title: "Response Rate",
+      title: "Tỷ lệ phản hồi",
       value: `${stats.responseRate.toFixed(0)}%`,
-      subtitle: `${stats.totalReviews - stats.pendingResponses} responded`,
+      subtitle: `${stats.totalReviews - stats.pendingResponses} đã phản hồi`,
       icon: <CheckCircle className="h-5 w-5" />,
       color:
         stats.responseRate >= 80
@@ -91,9 +94,9 @@ export const ReviewStatsCards: React.FC<ReviewStatsCardsProps> = ({
           : "bg-red-500",
     },
     {
-      title: "Pending Responses",
+      title: "Chờ phản hồi",
       value: stats.pendingResponses.toString(),
-      subtitle: "need attention",
+      subtitle: "cần chú ý",
       icon: <Clock className="h-5 w-5" />,
       color:
         stats.pendingResponses > 5
@@ -102,41 +105,7 @@ export const ReviewStatsCards: React.FC<ReviewStatsCardsProps> = ({
           ? "bg-yellow-500"
           : "bg-green-500",
     },
-    {
-      title: "Positive Reviews",
-      value: stats.positiveReviews.toString(),
-      subtitle: `${((stats.positiveReviews / stats.totalReviews) * 100).toFixed(
-        0
-      )}% of total`,
-      icon: <TrendingUp className="h-5 w-5" />,
-      color: "bg-green-500",
-    },
-    {
-      title: "Recent Reviews",
-      value: stats.recentReviews.toString(),
-      subtitle: "in last 7 days",
-      icon: <Clock className="h-5 w-5" />,
-      color: "bg-purple-500",
-    },
-    {
-      title: "Negative Reviews",
-      value: stats.negativeReviews.toString(),
-      subtitle: `${((stats.negativeReviews / stats.totalReviews) * 100).toFixed(
-        0
-      )}% of total`,
-      icon: <AlertCircle className="h-5 w-5" />,
-      color: "bg-red-500",
-    },
-    {
-      title: "5-Star Reviews",
-      value: stats.ratingDistribution[5].toString(),
-      subtitle: `${(
-        (stats.ratingDistribution[5] / stats.totalReviews) *
-        100
-      ).toFixed(0)}% of total`,
-      icon: <Star className="h-5 w-5" />,
-      color: "bg-yellow-500",
-    },
+
   ];
 
   return (
@@ -144,7 +113,7 @@ export const ReviewStatsCards: React.FC<ReviewStatsCardsProps> = ({
       {/* Main Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((card, index) => (
-          <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+          <Card key={index} className="p-6 flex-row hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <div className={`p-3 rounded-lg ${card.color} text-white`}>
                 {card.icon}

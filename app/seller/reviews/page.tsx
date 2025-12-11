@@ -9,12 +9,12 @@ import { ReviewModal } from "./components/ReviewModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
+import storeReviewService, {
   StoreReview,
   ReviewStats,
   ReviewFilters,
-  reviewsAPI,
-} from "@/lib/mockData/reviews";
+} from "@/lib/services/storeReviewService";
+import { authApiService } from "@/lib/services/authApiService";
 import {
   Star,
   MessageCircle,
@@ -31,6 +31,7 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalReviews, setTotalReviews] = useState(0);
+  const [storeId, setStoreId] = useState<number | null>(null);
   const [selectedReview, setSelectedReview] = useState<StoreReview | null>(
     null
   );
@@ -44,24 +45,41 @@ export default function ReviewsPage() {
 
   const itemsPerPage = 10;
 
+  // Get store ID from localStorage
+  useEffect(() => {
+    const storeIdFromStorage = authApiService.getStoreId();
+    if (storeIdFromStorage) {
+      setStoreId(parseInt(storeIdFromStorage, 10));
+    } else {
+      console.error("Store ID not found in localStorage");
+    }
+  }, []);
+
   // Load data
   const loadData = useCallback(async () => {
+    if (!storeId) return;
+
     setLoading(true);
     try {
-      const [reviewsResult, statsResult] = await Promise.all([
-        reviewsAPI.getReviews(currentPage, itemsPerPage, filters),
-        reviewsAPI.getReviewStats(),
+      const [reviewsData, statsData] = await Promise.all([
+        storeReviewService.getReviewsByStore(storeId, filters),
+        storeReviewService.getReviewStats(storeId),
       ]);
 
-      setReviews(reviewsResult.reviews);
-      setTotalReviews(reviewsResult.total);
-      setReviewStats(statsResult);
+      // Pagination logic
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginatedReviews = reviewsData.slice(startIndex, endIndex);
+
+      setReviews(paginatedReviews);
+      setTotalReviews(reviewsData.length);
+      setReviewStats(statsData);
     } catch (error) {
       console.error("Failed to load reviews:", error);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, filters]);
+  }, [currentPage, filters, storeId]);
 
   // Load data on component mount and dependencies change
   useEffect(() => {
@@ -111,7 +129,7 @@ export default function ReviewsPage() {
   const handleSubmitResponse = useCallback(
     async (reviewId: number, responseText: string) => {
       try {
-        await reviewsAPI.respondToReview(reviewId, responseText);
+        await storeReviewService.addReply(reviewId, responseText);
         await loadData(); // Reload data to reflect changes
         handleCloseModal();
       } catch (error) {
@@ -125,7 +143,7 @@ export default function ReviewsPage() {
   const handleUpdateResponse = useCallback(
     async (reviewId: number, responseText: string) => {
       try {
-        await reviewsAPI.updateResponse(reviewId, responseText);
+        await storeReviewService.addReply(reviewId, responseText);
         await loadData(); // Reload data to reflect changes
         handleCloseModal();
       } catch (error) {
@@ -137,9 +155,9 @@ export default function ReviewsPage() {
   );
 
   const handleDeleteResponse = useCallback(
-    async (reviewId: number) => {
+    async (review: StoreReview) => {
       try {
-        await reviewsAPI.deleteResponse(reviewId);
+        await storeReviewService.deleteReply(review.id);
         await loadData(); // Reload data to reflect changes
         handleCloseModal();
       } catch (error) {
@@ -215,20 +233,6 @@ export default function ReviewsPage() {
             <p className="text-gray-600 mt-1">
               Monitor and respond to customer feedback
             </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {reviewStats && (
-              <div className="flex items-center gap-4">
-                <Badge variant="outline" className="flex items-center gap-2">
-                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  {reviewStats.averageRating.toFixed(1)} avg rating
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  {reviewStats.totalReviews} total reviews
-                </Badge>
-              </div>
-            )}
           </div>
         </div>
 
@@ -359,7 +363,12 @@ export default function ReviewsPage() {
           onClose={handleCloseModal}
           onSubmitResponse={handleSubmitResponse}
           onUpdateResponse={handleUpdateResponse}
-          onDeleteResponse={handleDeleteResponse}
+          onDeleteResponse={() => {
+            if (selectedReview) {
+              return handleDeleteResponse(selectedReview);
+            }
+            return Promise.resolve();
+          }}
           mode={modalMode}
         />
       </div>
