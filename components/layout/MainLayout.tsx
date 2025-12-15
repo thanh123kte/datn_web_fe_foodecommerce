@@ -12,6 +12,7 @@ interface MainLayoutProps {
   title?: string;
   showSearch?: boolean;
   className?: string;
+  noPadding?: boolean;
 }
 
 export default function MainLayout({
@@ -20,6 +21,7 @@ export default function MainLayout({
   title = "Dashboard",
   showSearch = true,
   className = "",
+  noPadding = false,
 }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingStoresCount, setPendingStoresCount] = useState(0);
@@ -93,7 +95,7 @@ export default function MainLayout({
         <main
           className={`flex-1 transition-all duration-300 overflow-y-auto ${className}`}
         >
-          <div className="min-h-full p-6 lg:p-8">{children}</div>
+          <div className={noPadding ? "min-h-full" : "min-h-full p-6 lg:p-8"}>{children}</div>
         </main>
       </div>
     </div>

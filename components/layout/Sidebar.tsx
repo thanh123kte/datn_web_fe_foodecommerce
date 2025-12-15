@@ -18,7 +18,9 @@ import {
   FileBarChart,
   Store,
   TicketPercent,
+  Bell,
   Megaphone,
+  MessageCircle,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -160,24 +162,22 @@ const navigationItems: NavItem[] = [
     roles: ["seller"],
   },
   {
-    title: "Promotions",
-    href: "/seller/promotions",
+    title: "Vouchers",
+    href: "/seller/vouchers",
     icon: Gift,
     roles: ["seller"],
-    children: [
-      {
-        title: "Banners",
-        href: "/seller/promotions/banners",
-        icon: Gift,
-        roles: ["seller"],
-      },
-      {
-        title: "Vouchers",
-        href: "/seller/promotions/vouchers",
-        icon: Gift,
-        roles: ["seller"],
-      },
-    ],
+  },
+  {
+    title: "Chat",
+    href: "/seller/chat",
+    icon: MessageCircle,
+    roles: ["seller"],
+  },
+  {
+    title: "Notifications",
+    href: "/seller/notifications",
+    icon: Bell,
+    roles: ["seller"],
   },
   {
     title: "Wallet",

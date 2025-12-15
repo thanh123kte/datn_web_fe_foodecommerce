@@ -1,6 +1,6 @@
 export enum DiscountType {
-  PERCENT = "PERCENT",
-  FIXED = "FIXED",
+  PERCENTAGE = "PERCENTAGE",
+  FIXED_AMOUNT = "FIXED_AMOUNT",
 }
 
 export enum DiscountStatus {
@@ -39,11 +39,13 @@ export interface Voucher {
 export interface Banner {
   id: number;
   title: string;
-  image_url: string;
+  imageUrl: string;
   description: string;
   status: BannerStatus;
-  created_at: string;
-  updated_at: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
   // Additional fields for display
   is_expired?: boolean;
 }
@@ -98,7 +100,16 @@ export interface VoucherFormData {
 
 export interface BannerFormData {
   title: string;
-  image_url: string;
-  description: string;
+  imageUrl?: string;
+  description?: string;
   status: BannerStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export interface BannerStats {
+  totalBanners: number;
+  activeBanners: number;
+  inactiveBanners: number;
+  expiredBanners: number;
 }

@@ -5,12 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Banner, BannerFormData, BannerStatus } from "@/types/promotion";
+import { Upload, X } from "lucide-react";
+import { bannerService } from "@/lib/services/bannerService";
+import { toast } from "sonner";
+import { buildAbsoluteUrl } from "@/lib/utils";
 
 interface BannerDetailModalProps {
   banner: Banner | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (banner: Banner) => void;
+  onSave: (banner: Banner, file?: File) => void;
   onStatusChange?: (bannerId: number, status: BannerStatus) => void;
   isCreateMode?: boolean;
 }
@@ -25,39 +29,48 @@ export function BannerDetailModal({
 }: BannerDetailModalProps) {
   const [formData, setFormData] = useState<BannerFormData>({
     title: "",
-    image_url: "",
+    imageUrl: "",
     description: "",
     status: BannerStatus.ACTIVE,
+    startDate: null,
+    endDate: null,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (banner) {
       setFormData({
         title: banner.title,
-        image_url: banner.image_url,
-        description: banner.description,
+        imageUrl: banner.imageUrl || "",
+        description: banner.description || "",
         status: banner.status,
+        startDate: banner.startDate || null,
+        endDate: banner.endDate || null,
       });
-      setImagePreview(banner.image_url);
+      setImagePreview(banner.imageUrl || "");
+      setSelectedFile(null); // Reset selected file when viewing existing banner
     } else if (isCreateMode) {
       setFormData({
         title: "",
-        image_url: "",
+        imageUrl: "",
         description: "",
         status: BannerStatus.ACTIVE,
+        startDate: null,
+        endDate: null,
       });
       setImagePreview("");
+      setSelectedFile(null);
     }
   }, [banner, isCreateMode]);
 
   const handleInputChange = (field: keyof BannerFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
-    if (field === "image_url") {
+    if (field === "imageUrl") {
       setImagePreview(value);
     }
 
@@ -66,26 +79,45 @@ export function BannerDetailModal({
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Kích thước file phải nhỏ hơn 5MB");
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        toast.error("Vui lòng chọn file hình ảnh");
+        return;
+      }
+
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
+      newErrors.title = "Tiêu đề là bắt buộc";
     }
 
-    if (!formData.image_url.trim()) {
-      newErrors.image_url = "Image URL is required";
-    } else {
-      // Basic URL validation
-      try {
-        new URL(formData.image_url);
-      } catch {
-        newErrors.image_url = "Please enter a valid URL";
+    if (!formData.imageUrl && !selectedFile && !banner?.imageUrl) {
+      newErrors.imageUrl = "Hình ảnh là bắt buộc";
+    }
+
+    if (formData.startDate && formData.endDate) {
+      const start = new Date(formData.startDate);
+      const end = new Date(formData.endDate);
+      if (start > end) {
+        newErrors.endDate = "Ngày kết thúc phải sau ngày bắt đầu";
       }
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
     }
 
     setErrors(newErrors);
@@ -104,16 +136,23 @@ export function BannerDetailModal({
     try {
       const updatedBanner: Banner = {
         ...banner,
-        id: banner?.id || Date.now(),
-        ...formData,
-        created_at: banner?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        id: banner?.id || 0,
+        title: formData.title,
+        imageUrl: formData.imageUrl || "",
+        description: formData.description || "",
+        status: formData.status,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        createdAt: banner?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
-      await onSave(updatedBanner);
+      // Pass selectedFile to parent for handling
+      await onSave(updatedBanner, selectedFile || undefined);
       onClose();
     } catch (error) {
       console.error("Error saving banner:", error);
+      toast.error("Không thể lưu banner");
     } finally {
       setIsLoading(false);
     }
@@ -141,7 +180,7 @@ export function BannerDetailModal({
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">
-              {isCreateMode ? "Create Banner" : "Banner Details"}
+              {isCreateMode ? "Tạo Banner Mới" : "Chi Tiết Banner"}
             </h2>
             <button
               onClick={onClose}
@@ -155,32 +194,80 @@ export function BannerDetailModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Banner Preview */}
           <div className="bg-gray-50 p-4 rounded-lg">
-            <Label className="block mb-2">Banner Preview</Label>
-            <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+            <Label className="block mb-2">Xem Trước Banner</Label>
+            <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center relative">
               {imagePreview ? (
-                <img
-                  src={imagePreview}
-                  alt="Banner Preview"
-                  className="w-full h-full object-cover"
-                  onError={handleImageError}
-                />
+                <>
+                  <img
+                    src={
+                      selectedFile
+                        ? imagePreview
+                        : buildAbsoluteUrl(imagePreview)
+                    }
+                    alt="Banner Preview"
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImagePreview("");
+                      setSelectedFile(null);
+                      handleInputChange("imageUrl", "");
+                    }}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </>
               ) : (
                 <div className="text-gray-400 text-center">
                   <div className="text-4xl mb-2">🖼️</div>
-                  <div>No image preview</div>
+                  <div>Chưa có hình ảnh</div>
                 </div>
               )}
             </div>
           </div>
 
+          {/* Image Upload */}
+          <div>
+            <Label htmlFor="imageFile">Tải Ảnh Lên</Label>
+            <div className="mt-1">
+              <label
+                htmlFor="imageFile"
+                className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors"
+              >
+                <Upload className="h-5 w-5 mr-2 text-gray-400" />
+                <span className="text-sm text-gray-600">
+                  {selectedFile
+                    ? selectedFile.name
+                    : "Chọn file ảnh hoặc kéo thả vào đây"}
+                </span>
+              </label>
+              <input
+                id="imageFile"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+            {errors.imageUrl && (
+              <p className="text-red-500 text-sm mt-1">{errors.imageUrl}</p>
+            )}
+            <p className="text-gray-500 text-sm mt-1">
+              Kích thước tối đa: 5MB. Định dạng hỗ trợ: JPG, PNG, WebP
+            </p>
+          </div>
+
           {/* Basic Information */}
           <div>
-            <Label htmlFor="title">Title *</Label>
+            <Label htmlFor="title">Tiêu Đề *</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => handleInputChange("title", e.target.value)}
-              placeholder="Enter banner title"
+              placeholder="Nhập tiêu đề banner"
               className={errors.title ? "border-red-500" : ""}
             />
             {errors.title && (
@@ -189,42 +276,56 @@ export function BannerDetailModal({
           </div>
 
           <div>
-            <Label htmlFor="image_url">Image URL *</Label>
-            <Input
-              id="image_url"
-              value={formData.image_url}
-              onChange={(e) => handleInputChange("image_url", e.target.value)}
-              placeholder="https://example.com/banner-image.jpg"
-              className={errors.image_url ? "border-red-500" : ""}
-            />
-            {errors.image_url && (
-              <p className="text-red-500 text-sm mt-1">{errors.image_url}</p>
-            )}
-            <p className="text-gray-500 text-sm mt-1">
-              Enter the URL of the banner image. Recommended size: 1200x400
-              pixels.
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description *</Label>
+            <Label htmlFor="description">Mô Tả</Label>
             <textarea
               id="description"
-              value={formData.description}
+              value={formData.description || ""}
               onChange={(e) => handleInputChange("description", e.target.value)}
-              placeholder="Enter banner description or promotional text"
+              placeholder="Nhập mô tả banner hoặc nội dung khuyến mãi"
               rows={4}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.description ? "border-red-500" : ""
-              }`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {errors.description && (
-              <p className="text-red-500 text-sm mt-1">{errors.description}</p>
-            )}
+          </div>
+
+          {/* Date Range */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="startDate">Ngày Bắt Đầu (Tùy chọn)</Label>
+              <Input
+                id="startDate"
+                type="datetime-local"
+                value={formData.startDate || ""}
+                onChange={(e) =>
+                  handleInputChange("startDate", e.target.value || null)
+                }
+                className="w-full"
+              />
+              <p className="text-gray-500 text-sm mt-1">
+                Để trống để bắt đầu ngay
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="endDate">Ngày Kết Thúc (Tùy chọn)</Label>
+              <Input
+                id="endDate"
+                type="datetime-local"
+                value={formData.endDate || ""}
+                onChange={(e) =>
+                  handleInputChange("endDate", e.target.value || null)
+                }
+                className={errors.endDate ? "border-red-500" : ""}
+              />
+              {errors.endDate && (
+                <p className="text-red-500 text-sm mt-1">{errors.endDate}</p>
+              )}
+              <p className="text-gray-500 text-sm mt-1">
+                Để trống nếu không có ngày hết hạn
+              </p>
+            </div>
           </div>
 
           <div>
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">Trạng Thái</Label>
             <select
               id="status"
               value={formData.status}
@@ -233,31 +334,23 @@ export function BannerDetailModal({
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value={BannerStatus.ACTIVE}>Active</option>
-              <option value={BannerStatus.INACTIVE}>Inactive</option>
-              <option value={BannerStatus.EXPIRED}>Expired</option>
+              <option value={BannerStatus.ACTIVE}>Hoạt Động</option>
+              <option value={BannerStatus.INACTIVE}>Tạm Dừng</option>
+              <option value={BannerStatus.EXPIRED}>Hết Hạn</option>
             </select>
           </div>
 
           {/* Banner Information (for existing banners) */}
           {banner && !isCreateMode && (
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Banner Information</h3>
+              <h3 className="font-semibold mb-2">Thông Tin Banner</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <div className="text-gray-600">Created</div>
-                  <div className="font-medium">
-                    {formatDate(banner.created_at)}
-                  </div>
+                  <div className="text-gray-600">Mã Banner</div>
+                  <div className="font-medium">#{banner.id}</div>
                 </div>
                 <div>
-                  <div className="text-gray-600">Last Updated</div>
-                  <div className="font-medium">
-                    {formatDate(banner.updated_at)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-gray-600">Current Status</div>
+                  <div className="text-gray-600">Trạng Thái Hiện Tại</div>
                   <div className="font-medium">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -273,26 +366,36 @@ export function BannerDetailModal({
                   </div>
                 </div>
                 <div>
-                  <div className="text-gray-600">Banner ID</div>
-                  <div className="font-medium">#{banner.id}</div>
+                  <div className="text-gray-600">Ngày Tạo</div>
+                  <div className="font-medium">
+                    {formatDate(banner.createdAt)}
+                  </div>
                 </div>
+                <div>
+                  <div className="text-gray-600">Cập Nhật Lần Cuối</div>
+                  <div className="font-medium">
+                    {formatDate(banner.updatedAt)}
+                  </div>
+                </div>
+                {banner.startDate && (
+                  <div>
+                    <div className="text-gray-600">Ngày Bắt Đầu</div>
+                    <div className="font-medium">
+                      {formatDate(banner.startDate)}
+                    </div>
+                  </div>
+                )}
+                {banner.endDate && (
+                  <div>
+                    <div className="text-gray-600">Ngày Kết Thúc</div>
+                    <div className="font-medium">
+                      {formatDate(banner.endDate)}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
-
-          {/* Image Upload Guidelines */}
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-blue-900 mb-2">
-              Image Guidelines
-            </h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Recommended dimensions: 1200x400 pixels</li>
-              <li>• Maximum file size: 5MB</li>
-              <li>• Supported formats: JPG, PNG, WebP</li>
-              <li>• Use high-quality images for better user experience</li>
-              <li>• Ensure text in images is readable on all devices</li>
-            </ul>
-          </div>
 
           {/* Action Buttons */}
           <div className="flex justify-between pt-4 border-t">
@@ -308,7 +411,7 @@ export function BannerDetailModal({
                       }
                       className="text-green-600 hover:text-green-700"
                     >
-                      Activate
+                      Kích Hoạt
                     </Button>
                   )}
                   {banner.status !== BannerStatus.INACTIVE && (
@@ -320,7 +423,7 @@ export function BannerDetailModal({
                       }
                       className="text-red-600 hover:text-red-700"
                     >
-                      Deactivate
+                      Tạm Dừng
                     </Button>
                   )}
                 </>
@@ -329,14 +432,14 @@ export function BannerDetailModal({
 
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                Hủy
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading
-                  ? "Saving..."
+                  ? "Đang lưu..."
                   : isCreateMode
-                  ? "Create"
-                  : "Save Changes"}
+                  ? "Tạo Mới"
+                  : "Lưu Thay Đổi"}
               </Button>
             </div>
           </div>

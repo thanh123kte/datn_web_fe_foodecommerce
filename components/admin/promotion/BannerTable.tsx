@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Banner, BannerFilters, BannerStatus } from "@/types/promotion";
+import { buildAbsoluteUrl } from "@/lib/utils";
 
 interface BannerTableProps {
   banners: Banner[];
@@ -12,6 +13,7 @@ interface BannerTableProps {
   onBannerClick?: (banner: Banner) => void;
   onStatusChange?: (bannerId: number, status: BannerStatus) => void;
   onFilterChange?: (filters: BannerFilters) => void;
+  onDelete?: (bannerId: number) => void;
   showFilters?: boolean;
 }
 
@@ -21,10 +23,11 @@ export function BannerTable({
   onBannerClick,
   onStatusChange,
   onFilterChange,
+  onDelete,
   showFilters = true,
 }: BannerTableProps) {
   const [filters, setFilters] = useState<BannerFilters>({});
-  const [sortField, setSortField] = useState<keyof Banner>("created_at");
+  const [sortField, setSortField] = useState<keyof Banner>("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const handleFilterChange = (newFilters: Partial<BannerFilters>) => {
@@ -86,7 +89,7 @@ export function BannerTable({
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex-1 min-w-[200px]">
               <Input
-                placeholder="Search banners by title, description..."
+                placeholder="Tìm kiếm banner theo tiêu đề, mô tả..."
                 value={filters.search || ""}
                 onChange={(e) => handleFilterChange({ search: e.target.value })}
                 className="w-full"
@@ -102,10 +105,10 @@ export function BannerTable({
                 }
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All Status</option>
-                <option value={BannerStatus.ACTIVE}>Active</option>
-                <option value={BannerStatus.INACTIVE}>Inactive</option>
-                <option value={BannerStatus.EXPIRED}>Expired</option>
+                <option value="">Tất cả trạng thái</option>
+                <option value={BannerStatus.ACTIVE}>Hoạt Động</option>
+                <option value={BannerStatus.INACTIVE}>Tạm Dừng</option>
+                <option value={BannerStatus.EXPIRED}>Hết Hạn</option>
               </select>
             </div>
           </div>
@@ -125,7 +128,7 @@ export function BannerTable({
                   onClick={() => handleSort("title")}
                   className="flex items-center gap-1 hover:text-blue-600"
                 >
-                  Title
+                  Tiêu Đề
                   {sortField === "title" && (
                     <span className="text-xs">
                       {sortDirection === "asc" ? "↑" : "↓"}
@@ -133,16 +136,14 @@ export function BannerTable({
                   )}
                 </button>
               </th>
-              <th className="text-left p-4 font-medium text-gray-700">
-                Description
-              </th>
+              <th className="text-left p-4 font-medium text-gray-700">Mô Tả</th>
               <th className="text-left p-4 font-medium text-gray-700">
                 <button
-                  onClick={() => handleSort("created_at")}
+                  onClick={() => handleSort("createdAt")}
                   className="flex items-center gap-1 hover:text-blue-600"
                 >
-                  Created
-                  {sortField === "created_at" && (
+                  Ngày Tạo
+                  {sortField === "createdAt" && (
                     <span className="text-xs">
                       {sortDirection === "asc" ? "↑" : "↓"}
                     </span>
@@ -150,10 +151,10 @@ export function BannerTable({
                 </button>
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Status
+                Trạng Thái
               </th>
               <th className="text-left p-4 font-medium text-gray-700">
-                Actions
+                Thao Tác
               </th>
             </tr>
           </thead>
@@ -167,9 +168,9 @@ export function BannerTable({
                 <td className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-16 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      {banner.image_url ? (
+                      {banner.imageUrl ? (
                         <img
-                          src={banner.image_url}
+                          src={buildAbsoluteUrl(banner.imageUrl)}
                           alt={banner.title}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -179,7 +180,7 @@ export function BannerTable({
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                          No Image
+                          Không có ảnh
                         </div>
                       )}
                     </div>
@@ -192,16 +193,16 @@ export function BannerTable({
                 </td>
                 <td className="p-4">
                   <div className="text-sm text-gray-600 max-w-xs truncate">
-                    {banner.description || "No description"}
+                    {banner.description || "Không có mô tả"}
                   </div>
                 </td>
                 <td className="p-4">
                   <div className="text-sm">
                     <div className="font-medium">
-                      {formatDate(banner.created_at)}
+                      {formatDate(banner.createdAt)}
                     </div>
                     <div className="text-gray-600">
-                      Updated: {formatDate(banner.updated_at)}
+                      Cập nhật: {formatDate(banner.updatedAt)}
                     </div>
                   </div>
                 </td>
@@ -228,7 +229,7 @@ export function BannerTable({
                             }}
                             className="text-green-600 hover:text-green-700"
                           >
-                            Activate
+                            Kích Hoạt
                           </Button>
                         )}
                         {banner.status !== BannerStatus.INACTIVE && (
@@ -241,10 +242,23 @@ export function BannerTable({
                             }}
                             className="text-red-600 hover:text-red-700"
                           >
-                            Deactivate
+                            Tạm Dừng
                           </Button>
                         )}
                       </>
+                    )}
+                    {onDelete && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(banner.id);
+                        }}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        Xóa
+                      </Button>
                     )}
                   </div>
                 </td>
@@ -255,7 +269,9 @@ export function BannerTable({
       </div>
 
       {banners.length === 0 && (
-        <div className="text-center py-8 text-gray-500">No banners found</div>
+        <div className="text-center py-8 text-gray-500">
+          Không tìm thấy banner nào
+        </div>
       )}
     </Card>
   );

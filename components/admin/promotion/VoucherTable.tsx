@@ -129,36 +129,18 @@ export function VoucherTable({
                 value={filters.discount_type || ""}
                 onChange={(e) =>
                   handleFilterChange({
-                    discount_type:
-                      (e.target.value as DiscountType) || undefined,
+                    discount_type: e.target.value
+                      ? (e.target.value as DiscountType)
+                      : undefined,
                   })
                 }
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All Types</option>
-                <option value={DiscountType.PERCENT}>Percentage</option>
-                <option value={DiscountType.FIXED}>Fixed Amount</option>
+                <option value="">Tất Cả Loại</option>
+                <option value={DiscountType.PERCENTAGE}>Phần Trăm</option>
+                <option value={DiscountType.FIXED_AMOUNT}>Giá Cố Định</option>
               </select>
-              <select
-                value={
-                  filters.is_created_by_admin === undefined
-                    ? ""
-                    : filters.is_created_by_admin.toString()
-                }
-                onChange={(e) =>
-                  handleFilterChange({
-                    is_created_by_admin:
-                      e.target.value === ""
-                        ? undefined
-                        : e.target.value === "true",
-                  })
-                }
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Creators</option>
-                <option value="true">Admin Created</option>
-                <option value="false">Seller Created</option>
-              </select>
+              
             </div>
           </div>
         </div>

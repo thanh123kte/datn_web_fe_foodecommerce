@@ -18,6 +18,7 @@ interface VoucherDetailModalProps {
   onSave: (voucher: Voucher) => void;
   onStatusChange?: (voucherId: number, status: DiscountStatus) => void;
   isCreateMode?: boolean;
+  isSeller?: boolean;
 }
 
 export function VoucherDetailModal({
@@ -27,11 +28,12 @@ export function VoucherDetailModal({
   onSave,
   onStatusChange,
   isCreateMode = false,
+  isSeller = false,
 }: VoucherDetailModalProps) {
   const [formData, setFormData] = useState<VoucherFormData>({
     code: "",
     title: "",
-    discount_type: DiscountType.PERCENT,
+    discount_type: DiscountType.PERCENTAGE,
     discount_value: 0,
     min_order_value: 0,
     max_discount: 0,
@@ -40,7 +42,7 @@ export function VoucherDetailModal({
     usage_limit: 1,
     seller_id: undefined,
     status: DiscountStatus.ACTIVE,
-    is_created_by_admin: true,
+    is_created_by_admin: !isSeller,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,7 +68,7 @@ export function VoucherDetailModal({
       setFormData({
         code: "",
         title: "",
-        discount_type: DiscountType.PERCENT,
+        discount_type: DiscountType.PERCENTAGE,
         discount_value: 0,
         min_order_value: 0,
         max_discount: 0,
@@ -77,7 +79,7 @@ export function VoucherDetailModal({
         usage_limit: 1,
         seller_id: undefined,
         status: DiscountStatus.ACTIVE,
-        is_created_by_admin: true,
+        is_created_by_admin: !isSeller,
       });
     }
   }, [voucher, isCreateMode]);
@@ -107,7 +109,7 @@ export function VoucherDetailModal({
     }
 
     if (
-      formData.discount_type === DiscountType.PERCENT &&
+      formData.discount_type === DiscountType.PERCENTAGE &&
       formData.discount_value > 100
     ) {
       newErrors.discount_value = "Percentage discount cannot exceed 100%";
@@ -250,15 +252,16 @@ export function VoucherDetailModal({
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value={DiscountType.PERCENT}>Percentage</option>
-                <option value={DiscountType.FIXED}>Fixed Amount</option>
+                <option value={DiscountType.PERCENTAGE}>Phần Trăm</option>
+                <option value={DiscountType.FIXED_AMOUNT}>Giá Cố Định</option>
               </select>
             </div>
 
             <div>
               <Label htmlFor="discount_value">
                 Discount Value * (
-                {formData.discount_type === DiscountType.PERCENT ? "%" : "$"})
+                {formData.discount_type === DiscountType.PERCENTAGE ? "%" : "$"}
+                )
               </Label>
               <Input
                 id="discount_value"
@@ -270,12 +273,14 @@ export function VoucherDetailModal({
                 placeholder="0"
                 min="0"
                 max={
-                  formData.discount_type === DiscountType.PERCENT
+                  formData.discount_type === DiscountType.PERCENTAGE
                     ? "100"
                     : undefined
                 }
                 step={
-                  formData.discount_type === DiscountType.PERCENT ? "1" : "0.01"
+                  formData.discount_type === DiscountType.PERCENTAGE
+                    ? "1"
+                    : "0.01"
                 }
                 className={errors.discount_value ? "border-red-500" : ""}
               />
@@ -299,7 +304,7 @@ export function VoucherDetailModal({
                 min="0"
                 step="0.01"
                 className={errors.max_discount ? "border-red-500" : ""}
-                disabled={formData.discount_type === DiscountType.FIXED}
+                disabled={formData.discount_type === DiscountType.FIXED_AMOUNT}
               />
               {errors.max_discount && (
                 <p className="text-red-500 text-sm mt-1">
@@ -406,31 +411,10 @@ export function VoucherDetailModal({
 
             <div>
               <Label>Creator</Label>
-              <div className="flex items-center space-x-4 mt-2">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="is_created_by_admin"
-                    checked={formData.is_created_by_admin}
-                    onChange={() =>
-                      handleInputChange("is_created_by_admin", true)
-                    }
-                    className="mr-2"
-                  />
-                  Admin Created
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="is_created_by_admin"
-                    checked={!formData.is_created_by_admin}
-                    onChange={() =>
-                      handleInputChange("is_created_by_admin", false)
-                    }
-                    className="mr-2"
-                  />
-                  Seller Created
-                </label>
+              <div className="mt-2">
+                <span className="text-sm text-gray-600">
+                  {isSeller ? "Seller Created" : "Admin Created"}
+                </span>
               </div>
             </div>
           </div>

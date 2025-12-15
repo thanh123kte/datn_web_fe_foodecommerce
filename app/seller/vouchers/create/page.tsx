@@ -5,42 +5,52 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { VoucherDetailModal } from "@/components/admin/promotion";
-import { Voucher, DiscountType, DiscountStatus } from "@/types/promotion";
-
+import { Voucher } from "@/types/promotion";
 import { voucherService } from "@/lib/services/voucherService";
 import { toast } from "sonner";
 
-export default function CreateVoucherPage() {
+export default function CreateSellerVoucherPage() {
   const router = useRouter();
-  const [showModal, setShowModal] = useState(true);
+  const [showModal] = useState(true);
 
   const handleVoucherSave = async (newVoucher: Voucher) => {
     try {
-      await voucherService.createVoucher(newVoucher);
-      toast.success("Tạo voucher thành công");
+      // Get store_id from localStorage
+      const storeId = localStorage.getItem("store_id");
+      if (!storeId) {
+        toast.error("Không tìm thấy thông tin cửa hàng");
+        return;
+      }
 
-      // Redirect back to vouchers page after successful creation
-      router.push("/admin/promotions/vouchers");
+      const sellerId = parseInt(storeId);
+
+      // Add seller_id and set is_created_by_admin to false
+      const voucherData = {
+        ...newVoucher,
+        seller_id: sellerId,
+        is_created_by_admin: false,
+      };
+
+      await voucherService.createVoucher(voucherData);
+      toast.success("Tạo voucher thành công!");
+      router.push("/seller/vouchers");
     } catch (error) {
       console.error("Error creating voucher:", error);
-      toast.error("Không thể tạo voucher");
+      toast.error("Không thể tạo voucher. Vui lòng thử lại!");
     }
   };
 
   const handleClose = () => {
-    router.push("/admin/promotions/vouchers");
+    router.push("/seller/vouchers");
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link
-              href="/admin/promotions/vouchers"
-              className="hover:text-blue-600"
-            >
+            <Link href="/seller/vouchers" className="hover:text-blue-600">
               Voucher
             </Link>
             <span>›</span>
@@ -48,10 +58,10 @@ export default function CreateVoucherPage() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Tạo Voucher Mới</h1>
           <p className="text-gray-600 mt-1">
-            Điền thông tin để tạo voucher giảm giá mới
+            Điền thông tin để tạo voucher giảm giá cho cửa hàng của bạn
           </p>
         </div>
-        <Link href="/admin/promotions/vouchers">
+        <Link href="/seller/vouchers">
           <Button variant="outline">Quay Lại</Button>
         </Link>
       </div>
@@ -123,6 +133,7 @@ export default function CreateVoucherPage() {
         onClose={handleClose}
         onSave={handleVoucherSave}
         isCreateMode={true}
+        isSeller={true}
       />
     </div>
   );
