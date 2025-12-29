@@ -61,9 +61,14 @@ class CategoriesService {
     return response.data;
   }
 
-  // Xóa category
+  // Xóa category (hard delete)
   async deleteCategory(id: number): Promise<void> {
     await axiosInstance.delete(`${this.basePath}/${id}`);
+  }
+
+  // Xóa mềm category (soft delete)
+  async softDeleteCategory(id: number): Promise<void> {
+    await axiosInstance.put(`${this.basePath}/${id}/soft-delete`);
   }
 
   // Upload image cho category

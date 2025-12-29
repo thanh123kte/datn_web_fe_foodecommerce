@@ -1,5 +1,11 @@
 import axiosInstance from "@/lib/api/axiosConfig";
 
+export interface ReviewImage {
+  id: number;
+  imageUrl: string;
+  createdAt: string;
+}
+
 export interface StoreReview {
   id: number;
   orderId: number;
@@ -10,7 +16,7 @@ export interface StoreReview {
   customerAvatar?: string;
   rating: number;
   comment: string;
-  imageUrl?: string;
+  images: ReviewImage[];
   reply?: string;
   repliedAt?: string;
   createdAt: string;

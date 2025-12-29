@@ -32,12 +32,14 @@ export default function SellerVouchersPage() {
           return;
         }
 
-        const sellerId = parseInt(storeId);
-        setStoreId(sellerId);
+        const storeIdNum = parseInt(storeId);
+        setStoreId(storeIdNum);
 
-        // Fetch vouchers for this seller
+        // Fetch vouchers for this store
         setLoading(true);
-        const vouchersData = await voucherService.getVouchersBySeller(sellerId);
+        const vouchersData = await voucherService.getVouchersByStore(
+          storeIdNum
+        );
         setVouchers(vouchersData);
       } catch (error) {
         console.error("Error loading vouchers:", error);
@@ -104,10 +106,9 @@ export default function SellerVouchersPage() {
     if (!window.confirm("Bạn có chắc chắn muốn xóa voucher này?")) {
       return;
     }
-    onDelete = { handleDeleteVoucher };
 
     try {
-      await voucherService.deleteVoucher(voucherId);
+      await voucherService.softDeleteVoucher(voucherId);
 
       // Remove from local state
       setVouchers((prev) => prev.filter((v) => v.id !== voucherId));
@@ -189,6 +190,7 @@ export default function SellerVouchersPage() {
           onVoucherClick={handleVoucherClick}
           onStatusChange={handleStatusChange}
           onFilterChange={setVoucherFilters}
+          onDelete={handleDeleteVoucher}
         />
       </div>
 

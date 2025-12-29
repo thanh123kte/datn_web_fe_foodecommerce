@@ -4,8 +4,10 @@ export type OrderStatus =
   | "PENDING"
   | "CONFIRMED"
   | "PREPARING"
+  | "PREPARED"
   | "SHIPPING"
   | "DELIVERED"
+  | "REVIEWED"
   | "CANCELLED";
 
 export type PaymentStatus = "PENDING" | "SUCCESS" | "FAILED";
@@ -57,6 +59,21 @@ export interface OrderItemResponseDto {
   totalPrice?: number;
 }
 
+export interface SalesStatsDto {
+  period: string;
+  orderCount: number;
+  totalRevenue: number;
+  averageOrderValue: number;
+}
+
+export interface TopProductDto {
+  productId: number;
+  productName: string;
+  productImage?: string;
+  totalQuantity: number;
+  totalRevenue: number;
+}
+
 class OrderService {
   private readonly basePath = "/api/orders";
 
@@ -77,6 +94,35 @@ class OrderService {
       { params: { status } }
     );
     return res.data as OrderResponseDto;
+  }
+
+  async assignDriver(orderId: number): Promise<OrderResponseDto> {
+    const res = await axiosInstance.post(
+      `${this.basePath}/${orderId}/assign-driver`
+    );
+    return res.data;
+  }
+
+  async getSalesStats(
+    storeId: number,
+    period: "daily" | "weekly" | "monthly" = "daily"
+  ): Promise<SalesStatsDto> {
+    const res = await axiosInstance.get(
+      `${this.basePath}/store/${storeId}/sales-stats`,
+      { params: { period } }
+    );
+    return res.data;
+  }
+
+  async getTopProducts(
+    storeId: number,
+    limit: number = 5
+  ): Promise<TopProductDto[]> {
+    const res = await axiosInstance.get(
+      `${this.basePath}/store/${storeId}/top-products`,
+      { params: { limit } }
+    );
+    return res.data;
   }
 }
 

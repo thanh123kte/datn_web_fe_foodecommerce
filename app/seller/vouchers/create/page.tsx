@@ -22,12 +22,12 @@ export default function CreateSellerVoucherPage() {
         return;
       }
 
-      const sellerId = parseInt(storeId);
+      const storeIdNum = parseInt(storeId);
 
-      // Add seller_id and set is_created_by_admin to false
+      // Add store_id and set is_created_by_admin to false
       const voucherData = {
         ...newVoucher,
-        seller_id: sellerId,
+        store_id: storeIdNum,
         is_created_by_admin: false,
       };
 

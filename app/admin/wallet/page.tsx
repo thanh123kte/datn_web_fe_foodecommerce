@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { WalletStatsCards } from "../../seller/wallet/components/WalletStatsCards";
 import { TransactionList } from "../../seller/wallet/components/TransactionList";
-import { DepositModal } from "../../seller/wallet/components/DepositModal";
-import { WithdrawModal } from "../../seller/wallet/components/WithdrawModal";
+import { WithdrawalRequestsList } from "./components/WithdrawalRequestsList";
+import { WithdrawalActionModal } from "./components/WithdrawalActionModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,7 @@ import {
   WalletResponseDto,
   WalletTransactionResponseDto,
   TransactionType,
+  TransactionStatus,
   PageResponse,
 } from "@/lib/services/walletService";
 import { authApiService } from "@/lib/services/authApiService";
@@ -22,6 +23,8 @@ import {
   RefreshCw,
   Download,
   AlertTriangle,
+  CheckSquare,
+  Clock,
   PlusCircle,
   MinusCircle,
 } from "lucide-react";
@@ -32,12 +35,18 @@ export default function AdminWalletPage() {
   const [transactions, setTransactions] = useState<
     PageResponse<WalletTransactionResponseDto>
   >({ content: [], totalElements: 0, totalPages: 0, size: 20, number: 0 });
+  const [withdrawalRequests, setWithdrawalRequests] = useState<
+    WalletTransactionResponseDto[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("withdrawals");
   const [transactionPage, setTransactionPage] = useState(0);
-  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] =
+    useState<WalletTransactionResponseDto | null>(null);
+  const [showActionModal, setShowActionModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
 
   // Get current user
   const currentUser = authApiService.getCurrentUser();
@@ -55,16 +64,25 @@ export default function AdminWalletPage() {
     setError(null);
 
     try {
-      const [walletResult, transactionsResult] = await Promise.all([
-        walletService.getWallet(userId),
-        walletService.getTransactions(userId, {
-          page: transactionPage,
-          size: 20,
-        }),
-      ]);
+      const [walletResult, transactionsResult, withdrawalsResult] =
+        await Promise.all([
+          walletService.getWallet(userId),
+          walletService.getTransactions(userId, {
+            page: transactionPage,
+            size: 20,
+          }),
+          // Load all withdrawal requests (all statuses) using new API
+          walletService.getWithdrawalsByStatus(TransactionStatus.PENDING),
+        ]);
 
       setWallet(walletResult);
       setTransactions(transactionsResult);
+
+      // Set withdrawal requests from new API
+      const withdrawals = Array.isArray(withdrawalsResult)
+        ? withdrawalsResult
+        : withdrawalsResult.content || [];
+      setWithdrawalRequests(withdrawals);
     } catch (error) {
       console.error("Failed to load wallet data:", error);
       setError("Không thể tải dữ liệu ví. Vui lòng thử lại sau.");
@@ -97,45 +115,45 @@ export default function AdminWalletPage() {
     setTransactionPage(newPage);
   }, []);
 
-  // Handle deposit
-  const handleDeposit = useCallback(
-    async (amount: number, description: string) => {
-      if (!userId) return;
-
-      try {
-        await walletService.deposit(String(userId), {
-          amount,
-          description,
-        });
-        await loadData(); // Refresh data after deposit
-        setShowDepositModal(false);
-      } catch (err) {
-        console.error("Deposit failed:", err);
-        throw err;
-      }
+  // Handle view withdrawal details
+  const handleViewWithdrawal = useCallback(
+    (request: WalletTransactionResponseDto) => {
+      setSelectedRequest(request);
+      setShowActionModal(true);
     },
-    [userId, loadData]
+    []
   );
 
-  // Handle withdraw
-  const handleWithdraw = useCallback(
-    async (amount: number, bankAccount: string, description: string) => {
-      if (!userId) return;
-
+  // Handle approve withdrawal
+  const handleApproveWithdrawal = useCallback(
+    async (transactionId: number) => {
       try {
-        await walletService.withdraw(String(userId), {
-          amount,
-          bankAccount,
-          description,
-        });
-        await loadData(); // Refresh data after withdraw
-        setShowWithdrawModal(false);
+        await walletService.approveWithdrawal(transactionId);
+        await loadData(); // Refresh data
+        setShowActionModal(false);
+        setSelectedRequest(null);
       } catch (err) {
-        console.error("Withdraw failed:", err);
+        console.error("Approve withdrawal failed:", err);
         throw err;
       }
     },
-    [userId, loadData]
+    [loadData]
+  );
+
+  // Handle reject withdrawal
+  const handleRejectWithdrawal = useCallback(
+    async (transactionId: number, reason: string) => {
+      try {
+        await walletService.rejectWithdrawal(transactionId, reason);
+        await loadData(); // Refresh data
+        setShowActionModal(false);
+        setSelectedRequest(null);
+      } catch (err) {
+        console.error("Reject withdrawal failed:", err);
+        throw err;
+      }
+    },
+    [loadData]
   );
 
   // Show error if no user ID
@@ -228,10 +246,61 @@ export default function AdminWalletPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-            <TabsTrigger value="transactions">Giao dịch</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="withdrawals">
+              <Clock className="h-4 w-4 mr-2" />
+              Yêu cầu rút tiền
+              {withdrawalRequests.filter(
+                (r) => r.status === TransactionStatus.PENDING
+              ).length > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-500 text-white rounded-full">
+                  {
+                    withdrawalRequests.filter(
+                      (r) => r.status === TransactionStatus.PENDING
+                    ).length
+                  }
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="overview">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Tổng quan
+            </TabsTrigger>
+            <TabsTrigger value="transactions">Lịch sử giao dịch</TabsTrigger>
           </TabsList>
+
+          {/* Withdrawal Requests Tab */}
+          <TabsContent value="withdrawals" className="space-y-6 mt-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div></div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+                  />
+                  Làm mới
+                </Button>
+              </div>
+
+              {/* Stats Cards */}
+
+              {/* Withdrawal Requests List */}
+              <WithdrawalRequestsList
+                requests={withdrawalRequests}
+                loading={loading}
+                onApprove={handleApproveWithdrawal}
+                onReject={(transactionId: number) => handleRejectWithdrawal(transactionId, "Rejected by admin")}
+                onViewDetails={handleViewWithdrawal}
+              />
+            </Card>
+          </TabsContent>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6 mt-6">
@@ -344,19 +413,16 @@ export default function AdminWalletPage() {
         </Tabs>
       </div>
 
-      {/* Modals */}
-      <DepositModal
-        isOpen={showDepositModal}
-        onClose={() => setShowDepositModal(false)}
-        onDeposit={handleDeposit}
-        currentBalance={wallet?.balance || "0"}
-      />
-
-      <WithdrawModal
-        isOpen={showWithdrawModal}
-        onClose={() => setShowWithdrawModal(false)}
-        onWithdraw={handleWithdraw}
-        currentBalance={wallet?.balance || "0"}
+      {/* Withdrawal Action Modal */}
+      <WithdrawalActionModal
+        isOpen={showActionModal}
+        onClose={() => {
+          setShowActionModal(false);
+          setSelectedRequest(null);
+        }}
+        request={selectedRequest}
+        onApprove={handleApproveWithdrawal}
+        onReject={handleRejectWithdrawal}
       />
     </>
   );

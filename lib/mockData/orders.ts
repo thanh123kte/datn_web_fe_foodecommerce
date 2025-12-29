@@ -3,8 +3,10 @@ export type OrderStatus =
   | "PENDING"
   | "CONFIRMED"
   | "PREPARING"
+  | "PREPARED"
   | "SHIPPING"
   | "DELIVERED"
+  | "REVIEWED"
   | "CANCELLED";
 export type PaymentStatus = "PENDING" | "SUCCESS" | "FAILED";
 export type PaymentMethod = "COD" | "QTIWALLET";

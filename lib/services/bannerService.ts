@@ -96,10 +96,17 @@ class BannerService {
   }
 
   /**
-   * Xóa banner
+   * Xóa banner (hard delete)
    */
   async deleteBanner(id: number): Promise<void> {
     await axiosInstance.delete(`${this.baseUrl}/${id}`);
+  }
+
+  /**
+   * Xóa mềm banner (soft delete)
+   */
+  async softDeleteBanner(id: number): Promise<void> {
+    await axiosInstance.put(`${this.baseUrl}/${id}/soft-delete`);
   }
 
   /**

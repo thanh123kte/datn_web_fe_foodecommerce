@@ -12,7 +12,7 @@ const formatTime = (dateString: string): string => {
 
 interface MessageListProps {
   messages: Message[];
-  currentUserId: number;
+  currentUserId: string | null;
 }
 
 export function MessageList({ messages, currentUserId }: MessageListProps) {

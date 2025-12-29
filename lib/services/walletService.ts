@@ -17,6 +17,7 @@ export interface WalletTransactionResponseDto {
   walletId: number;
   userId: string;
   transactionType: TransactionType;
+  status: TransactionStatus;
   amount: string;
   balanceBefore: string;
   balanceAfter: string;
@@ -32,6 +33,14 @@ export enum TransactionType {
   EARN = "EARN",
   REFUND = "REFUND",
   PAYMENT = "PAYMENT",
+  RECEIVE = "RECEIVE",
+}
+
+export enum TransactionStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  SUCCESSFUL = "SUCCESSFUL",
+  REJECTED = "REJECTED",
 }
 
 export interface DepositRequest {
@@ -107,7 +116,7 @@ class WalletService {
   async withdraw(
     userId: string,
     request: WithdrawalRequest
-  ): Promise<WalletTransactionResponseDto> {
+  ): Promise<WalletResponseDto> {
     const response = await axiosInstance.post(
       `${this.basePath}/${userId}/withdraw`,
       {
@@ -159,6 +168,87 @@ class WalletService {
       }
     );
     return response.data;
+  }
+
+  /**
+   * Admin approve withdrawal request
+   * POST /api/wallets/admin/withdrawals/{transactionId}/approve
+   */
+  async approveWithdrawal(
+    transactionId: number
+  ): Promise<WalletTransactionResponseDto> {
+    const response = await axiosInstance.post(
+      `${this.basePath}/admin/withdrawals/${transactionId}/approve`
+    );
+    return response.data;
+  }
+
+  /**
+   * Admin reject withdrawal request
+   * POST /api/wallets/admin/withdrawals/{transactionId}/reject
+   */
+  async rejectWithdrawal(
+    transactionId: number,
+    reason: string
+  ): Promise<WalletTransactionResponseDto> {
+    const response = await axiosInstance.post(
+      `${this.basePath}/admin/withdrawals/${transactionId}/reject`,
+      null,
+      {
+        params: { reason },
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get all withdrawal requests by status (for admin)
+   * GET /api/wallets/admin/withdrawals/status?status=PENDING&page=0&size=20
+   */
+  async getWithdrawalsByStatus(
+    status: TransactionStatus,
+    page?: number,
+    size?: number
+  ): Promise<
+    PageResponse<WalletTransactionResponseDto> | WalletTransactionResponseDto[]
+  > {
+    const params: Record<string, string | number> = {
+      status: status,
+    };
+
+    if (page !== undefined && size !== undefined) {
+      params.page = page;
+      params.size = size;
+    }
+
+    const response = await axiosInstance.get(
+      `${this.basePath}/admin/withdrawals/status`,
+      { params }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get all pending withdrawal requests (for admin)
+   * Convenience method that calls getWithdrawalsByStatus with PENDING status
+   */
+  async getPendingWithdrawals(
+    page: number = 0,
+    size: number = 20
+  ): Promise<WalletTransactionResponseDto[]> {
+    const result = await this.getWithdrawalsByStatus(
+      TransactionStatus.PENDING,
+      page,
+      size
+    );
+
+    // If paginated response, return content
+    if (result && typeof result === "object" && "content" in result) {
+      return result.content;
+    }
+
+    // Otherwise return the array directly
+    return Array.isArray(result) ? result : [];
   }
 }
 

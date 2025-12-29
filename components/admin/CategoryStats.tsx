@@ -39,34 +39,7 @@ export function CategoryStatsComponent({ stats, loading }: CategoryStatsProps) {
       color: "text-green-600",
       bgColor: "bg-green-50",
     },
-    {
-      title: "Danh mục không hoạt động",
-      value: stats.inactive_categories,
-      icon: "❌",
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
-    },
-    {
-      title: "Tổng sản phẩm",
-      value: stats.total_products,
-      icon: "🍽️",
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-    },
-    {
-      title: "Có sản phẩm",
-      value: stats.categories_with_products,
-      icon: "📊",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-    },
-    {
-      title: "Danh mục trống",
-      value: stats.categories_without_products,
-      icon: "📭",
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-    },
+
   ];
 
   return (

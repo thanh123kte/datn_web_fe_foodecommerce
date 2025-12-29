@@ -65,7 +65,6 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const [currentMode, setCurrentMode] = useState<"view" | "reply" | "edit">(
     mode
   );
-  const [imageError, setImageError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
 
   React.useEffect(() => {
@@ -270,19 +269,25 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
             </Card>
           </div>
 
-          {/* Review Image */}
-          {review.imageUrl && !imageError && (
+          {/* Review Images */}
+          {review.images && review.images.length > 0 && (
             <div className="mb-6">
               <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                Ảnh đánh giá
+                Ảnh đánh giá ({review.images.length})
               </Label>
-              <div className="relative">
-                <img
-                  src={buildAbsoluteUrl(review.imageUrl)}
-                  alt="Ảnh đánh giá"
-                  className="w-full max-w-md h-auto rounded-lg border border-gray-200"
-                  onError={() => setImageError(true)}
-                />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {review.images.map((image, index) => (
+                  <div key={image.id} className="relative">
+                    <img
+                      src={buildAbsoluteUrl(image.imageUrl)}
+                      alt={`Ảnh đánh giá ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}

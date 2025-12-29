@@ -18,6 +18,7 @@ interface VoucherTableProps {
   onStatusChange?: (voucherId: number, status: DiscountStatus) => void;
   onFilterChange?: (filters: VoucherFilters) => void;
   showFilters?: boolean;
+  onDelete?: (voucherId: number) => void;
 }
 
 export function VoucherTable({
@@ -27,6 +28,7 @@ export function VoucherTable({
   onStatusChange,
   onFilterChange,
   showFilters = true,
+  onDelete,
 }: VoucherTableProps) {
   const [filters, setFilters] = useState<VoucherFilters>({});
   const [sortField, setSortField] = useState<keyof Voucher>("created_at");
@@ -140,7 +142,6 @@ export function VoucherTable({
                 <option value={DiscountType.PERCENTAGE}>Phần Trăm</option>
                 <option value={DiscountType.FIXED_AMOUNT}>Giá Cố Định</option>
               </select>
-              
             </div>
           </div>
         </div>
@@ -314,6 +315,19 @@ export function VoucherTable({
                           </Button>
                         )}
                       </>
+                    )}
+                    {onDelete && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(voucher.id);
+                        }}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        Xóa
+                      </Button>
                     )}
                   </div>
                 </td>

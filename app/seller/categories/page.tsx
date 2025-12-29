@@ -186,8 +186,13 @@ export default function CategoriesPage() {
 
     setModalLoading(true);
     try {
-      await storeCategoryService.delete(selectedCategory.id);
-      await loadCategories();
+      await storeCategoryService.softDelete(selectedCategory.id);
+
+      // Remove from local state immediately
+      setCategories((prevCategories) =>
+        prevCategories.filter((category) => category.id !== selectedCategory.id)
+      );
+
       setShowDeleteModal(false);
       setSelectedCategory(null);
     } catch (error) {

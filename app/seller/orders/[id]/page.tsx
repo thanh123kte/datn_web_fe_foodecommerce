@@ -73,14 +73,37 @@ export default function OrderDetailPage() {
 
     setUpdateLoading(true);
     try {
+      // Cập nhật status
       const updatedOrder = await orderService.updateStatus(
         Number(order.id),
         status
       );
       setOrder(mapDtoToOrder(updatedOrder));
+
+      // Nếu status được cập nhật thành PREPARED, tự động gán driver
+      if (status === "PREPARED") {
+        try {
+          // Gọi API gán driver
+          const orderWithDriver = await orderService.assignDriver(
+            Number(order.id)
+          );
+          // Cập nhật lại order với thông tin driver và status mới (SHIPPING)
+          setOrder(mapDtoToOrder(orderWithDriver));
+          alert(
+            "Đã gán tài xế thành công! Đơn hàng chuyển sang trạng thái Đang giao hàng."
+          );
+        } catch (driverError) {
+          console.error("Error assigning driver:", driverError);
+          alert(
+            "Đã cập nhật trạng thái nhưng không thể gán tài xế. Vui lòng thử lại sau."
+          );
+        }
+      }
+
       setShowStatusModal(false);
     } catch (error) {
       console.error("Error updating order status:", error);
+      alert("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
     } finally {
       setUpdateLoading(false);
     }
@@ -173,11 +196,12 @@ export default function OrderDetailPage() {
 
   const getStatusTimeline = () => {
     const statuses = [
-      { key: "PENDING", label: "Order Placed", icon: Clock },
-      { key: "CONFIRMED", label: "Confirmed", icon: CheckCircle },
-      { key: "PREPARING", label: "Preparing", icon: Package },
-      { key: "SHIPPING", label: "Out for Delivery", icon: Truck },
-      { key: "DELIVERED", label: "Delivered", icon: MapPin },
+      { key: "PENDING", label: "Chờ xác nhận", icon: Clock },
+      { key: "CONFIRMED", label: "Đã xác nhận", icon: CheckCircle },
+      { key: "PREPARING", label: "Đang chuẩn bị", icon: Package },
+      { key: "PREPARED", label: "Đã chuẩn bị xong", icon: CheckCircle },
+      { key: "SHIPPING", label: "Đang giao hàng", icon: Truck },
+      { key: "DELIVERED", label: "Đã giao hàng", icon: MapPin },
     ];
 
     if (!order) return [];
@@ -578,6 +602,17 @@ export default function OrderDetailPage() {
                       >
                         <Package className="w-4 h-4 mr-2" />
                         Đang chuẩn bị
+                      </Button>
+                    )}
+
+                    {order.orderStatus === "PREPARING" && (
+                      <Button
+                        onClick={() => handleUpdateStatus("PREPARED")}
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                        disabled={updateLoading}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Đã chuẩn bị xong
                       </Button>
                     )}
 

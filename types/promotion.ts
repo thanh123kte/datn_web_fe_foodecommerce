@@ -27,7 +27,7 @@ export interface Voucher {
   end_date: string;
   usage_limit: number;
   used_count: number;
-  seller_id?: number;
+  store_id?: number;
   status: DiscountStatus;
   is_created_by_admin: boolean;
   // Additional fields for display
@@ -55,7 +55,7 @@ export interface VoucherFilters {
   status?: DiscountStatus;
   discount_type?: DiscountType;
   is_created_by_admin?: boolean;
-  seller_id?: number;
+  store_id?: number;
   date_range?: {
     start: string;
     end: string;
@@ -93,7 +93,7 @@ export interface VoucherFormData {
   start_date: string;
   end_date: string;
   usage_limit: number;
-  seller_id?: number;
+  store_id?: number;
   status: DiscountStatus;
   is_created_by_admin: boolean;
 }

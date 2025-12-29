@@ -140,9 +140,14 @@ class ProductService {
     return res.data;
   }
 
-  // Delete product
+  // Delete product (hard delete)
   async delete(id: number): Promise<void> {
     await axiosInstance.delete(`${this.basePath}/${id}`);
+  }
+
+  // Soft delete product
+  async softDelete(id: number): Promise<void> {
+    await axiosInstance.put(`${this.basePath}/${id}/soft-delete`);
   }
 }
 

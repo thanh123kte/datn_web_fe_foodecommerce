@@ -1,369 +1,338 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { RevenueStatsCards } from "./components/RevenueStatsCards";
 import { RevenueChart } from "./components/RevenueChart";
-import {
-  RevenueFilters,
-  RevenueFiltersState,
-} from "./components/RevenueFilters";
+import { TopProducts } from "./components/TopProducts";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import sellerRevenueService, {
   RevenueStats,
   ChartData,
-  RevenueReport,
-  revenueAPI,
-  formatCurrency,
-  formatNumber,
-  formatPercentage,
-} from "@/lib/mockData/revenue";
+  TopProduct,
+} from "@/lib/services/sellerRevenueService";
 import {
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  FileText,
+  ShoppingCart,
+  DollarSign,
   AlertCircle,
-  CheckCircle2,
+  Loader2,
+  RefreshCw,
+  CircleDollarSign,
 } from "lucide-react";
 
 export default function RevenuePage() {
   // State management
   const [revenueStats, setRevenueStats] = useState<RevenueStats | null>(null);
   const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [revenueReports, setRevenueReports] = useState<RevenueReport[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [exportLoading, setExportLoading] = useState(false);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [storeId, setStoreId] = useState<number | null>(null);
 
-  // Default filter state
-  const [filters, setFilters] = useState<RevenueFiltersState>(() => {
-    const today = new Date();
-    const lastWeek = new Date(today);
-    lastWeek.setDate(lastWeek.getDate() - 7);
+  // Filter state
+  const [period, setPeriod] = useState<"daily" | "weekly" | "monthly" | null>(
+    "daily"
+  );
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
-    return {
-      startDate: lastWeek.toISOString().split("T")[0],
-      endDate: today.toISOString().split("T")[0],
-      reportType: "DAILY",
-      type: "line",
-      showRevenue: true,
-      showOrders: true,
-      showDiscount: true,
-      showCommission: false,
-    };
-  });
+  // Get store ID from localStorage
+  useEffect(() => {
+    const storedStoreId = localStorage.getItem("store_id");
+    if (storedStoreId) {
+      setStoreId(parseInt(storedStoreId));
+    } else {
+      console.error("No store_id found in localStorage");
+      setInitialLoading(false);
+    }
+  }, []);
 
   // Load data based on filters
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [statsResult, chartResult, reportsResult] = await Promise.all([
-        revenueAPI.getRevenueStats(filters.startDate, filters.endDate),
-        revenueAPI.getChartData(
-          filters.startDate,
-          filters.endDate,
-          filters.reportType
-        ),
-        revenueAPI.getRevenueReports(1, 10, filters.reportType),
-      ]);
+  const loadData = useCallback(
+    async (isInitial = false) => {
+      if (!storeId) return;
 
-      setRevenueStats(statsResult);
-      setChartData(chartResult);
-      setRevenueReports(reportsResult.reports);
-    } catch (error) {
-      console.error("Failed to load revenue data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters.startDate, filters.endDate, filters.reportType]);
+      if (isInitial) {
+        setInitialLoading(true);
+      } else {
+        setRefreshing(true);
+      }
 
-  // Load data on component mount and filter changes
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // Handle filter changes
-  const handleFiltersChange = useCallback(
-    (newFilters: Partial<RevenueFiltersState>) => {
-      setFilters((prev) => ({ ...prev, ...newFilters }));
-    },
-    []
-  );
-
-  // Handle refresh
-  const handleRefresh = useCallback(() => {
-    loadData();
-  }, [loadData]);
-
-  // Handle export
-  const handleExport = useCallback(
-    async (format: "CSV" | "PDF") => {
-      setExportLoading(true);
       try {
-        const blob = await revenueAPI.exportRevenueData(
-          filters.startDate,
-          filters.endDate,
-          format
-        );
+        let salesStats;
 
-        // Create download link
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `revenue-report-${filters.startDate}-${
-          filters.endDate
-        }.${format.toLowerCase()}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error("Failed to export data:", error);
+        // Check if both dates are provided, use custom date range API
+        if (startDate && endDate) {
+          salesStats = await sellerRevenueService.getSalesStatsByDateRange(
+            storeId,
+            startDate,
+            endDate
+          );
+        } else if (period) {
+          // Otherwise use period-based API if period is set
+          salesStats = await sellerRevenueService.getSalesStats(
+            storeId,
+            period
+          );
+        } else {
+          // Default to daily if nothing is selected
+          salesStats = await sellerRevenueService.getSalesStats(
+            storeId,
+            "daily"
+          );
+        }
+
+        // Calculate revenue stats from sales data
+        const revenueStatsData =
+          sellerRevenueService.calculateRevenueStats(salesStats);
+        setRevenueStats(revenueStatsData);
+
+        // Convert to chart data
+        const chartDataConverted =
+          sellerRevenueService.convertToChartData(salesStats);
+        setChartData(chartDataConverted);
+
+        // Fetch top products
+        const topProductsData = await sellerRevenueService.getTopProducts(
+          storeId,
+          5
+        );
+        setTopProducts(topProductsData);
+      } catch (error: unknown) {
+        console.error("Failed to load revenue data:", error);
+
+        // Set empty fallback data to prevent UI crashes
+        setRevenueStats({
+          totalRevenue: 0,
+          totalOrders: 0,
+          averageOrderValue: 0,
+          totalDiscount: 0,
+          totalShippingFee: 0,
+          totalCommission: 0,
+          netRevenue: 0,
+          previousPeriodRevenue: 0,
+          revenueGrowth: 0,
+        });
+        setChartData([]);
+        setTopProducts([]);
       } finally {
-        setExportLoading(false);
+        setInitialLoading(false);
+        setRefreshing(false);
       }
     },
-    [filters.startDate, filters.endDate]
+    [storeId, period, startDate, endDate]
   );
 
-  // Calculate date range info
-  const dateRangeInfo = useMemo(() => {
-    const start = new Date(filters.startDate);
-    const end = new Date(filters.endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  // Load data on component mount and when filters change
+  useEffect(() => {
+    if (storeId) {
+      loadData(initialLoading);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId, period, startDate, endDate]);
 
-    return {
-      totalDays: diffDays,
-      startDate: start.toLocaleDateString("vi-VN", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-      endDate: end.toLocaleDateString("vi-VN", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-    };
-  }, [filters.startDate, filters.endDate]);
+  // Handle refresh
+  const handleRefresh = () => {
+    loadData(false);
+  };
 
-  return (
-    <MainLayout userRole="seller" title="Revenue Analytics">
-      <div className="space-y-6 p-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Revenue Analytics
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Track your store performance and revenue insights
+  // Handle period change - clear date range when selecting period
+  const handlePeriodChange = (newPeriod: "daily" | "weekly" | "monthly") => {
+    setPeriod(newPeriod);
+    setStartDate("");
+    setEndDate("");
+  };
+
+  // Handle date change - clear period when entering dates
+  const handleStartDateChange = (date: string) => {
+    setStartDate(date);
+    if (date) {
+      setPeriod(null);
+    }
+  };
+
+  const handleEndDateChange = (date: string) => {
+    setEndDate(date);
+    if (date) {
+      setPeriod(null);
+    }
+  };
+
+  if (initialLoading) {
+    return (
+      <MainLayout userRole="seller" title="Revenue Analytics">
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!storeId) {
+    return (
+      <MainLayout userRole="seller" title="Revenue Analytics">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-gray-600">
+              No store found. Please contact administrator.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="text-sm">
-              <Calendar className="h-4 w-4 mr-2" />
-              {dateRangeInfo.totalDays} day
-              {dateRangeInfo.totalDays > 1 ? "s" : ""}
-            </Badge>
-          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout userRole="seller" title="Thống Kê Doanh Thu">
+      <div className="space-y-6 p-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Total Orders Card */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Tổng Đơn Hàng
+                </p>
+                <h3 className="text-3xl font-bold text-gray-900 mt-2">
+                  {refreshing ? (
+                    <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
+                  ) : (
+                    sellerRevenueService.formatNumber(
+                      revenueStats?.totalOrders || 0
+                    )
+                  )}
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <ShoppingCart className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </Card>
+
+          {/* Total Revenue Card */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Tổng Doanh Thu
+                </p>
+                <h3 className="text-3xl font-bold text-gray-900 mt-2">
+                  {refreshing ? (
+                    <div className="h-9 w-32 bg-gray-200 animate-pulse rounded"></div>
+                  ) : (
+                    sellerRevenueService.formatCurrency(
+                      revenueStats?.totalRevenue || 0
+                    )
+                  )}
+                </h3>
+              </div>
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <CircleDollarSign className="h-6 w-6 text-yellow-600" />
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* Filters */}
-        <RevenueFilters
-          filters={filters}
-          onFiltersChange={handleFiltersChange}
-          onRefresh={handleRefresh}
-          onExport={handleExport}
-          loading={loading || exportLoading}
-        />
+        <Card className="p-6">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            {/* Period Filter */}
+            <div className="flex-1">
+              <Label
+                htmlFor="period"
+                className="text-sm font-medium text-gray-700 mb-2 block"
+              >
+                Loại Thống Kê
+              </Label>
+              <div className="flex gap-2">
+                <Button
+                  variant={period === "daily" ? "default" : "outline"}
+                  onClick={() => handlePeriodChange("daily")}
+                  className="flex-1"
+                >
+                  Theo Ngày
+                </Button>
+                <Button
+                  variant={period === "weekly" ? "default" : "outline"}
+                  onClick={() => handlePeriodChange("weekly")}
+                  className="flex-1"
+                >
+                  Theo Tuần
+                </Button>
+                <Button
+                  variant={period === "monthly" ? "default" : "outline"}
+                  onClick={() => handlePeriodChange("monthly")}
+                  className="flex-1"
+                >
+                  Theo Tháng
+                </Button>
+              </div>
+            </div>
 
-        {/* Stats Cards */}
-        {revenueStats && (
-          <RevenueStatsCards stats={revenueStats} loading={loading} />
-        )}
+            {/* Date Range */}
+            <div className="flex-1">
+              <Label
+                htmlFor="startDate"
+                className="text-sm font-medium text-gray-700 mb-2 block"
+              >
+                Từ Ngày
+              </Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            <div className="flex-1">
+              <Label
+                htmlFor="endDate"
+                className="text-sm font-medium text-gray-700 mb-2 block"
+              >
+                Đến Ngày
+              </Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => handleEndDateChange(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            {/* Refresh Button */}
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="h-10"
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+              />
+              Làm Mới
+            </Button>
+          </div>
+        </Card>
 
         {/* Charts */}
         <RevenueChart
           data={chartData}
-          loading={loading}
-          chartType={filters.type}
-          showRevenue={filters.showRevenue}
-          showOrders={filters.showOrders}
-          showDiscount={filters.showDiscount}
-          showCommission={filters.showCommission}
+          loading={false}
+          chartType="line"
+          showRevenue={true}
+          showOrders={true}
+          showDiscount={false}
+          showCommission={false}
         />
 
-        {/* Revenue Reports Table */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Recent Revenue Reports
-            </h3>
-            <Button variant="outline" size="sm">
-              <FileText className="h-4 w-4 mr-2" />
-              View All Reports
-            </Button>
-          </div>
-
-          {loading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="animate-pulse">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-                      <div className="space-y-2">
-                        <div className="w-32 h-4 bg-gray-200 rounded"></div>
-                        <div className="w-24 h-3 bg-gray-200 rounded"></div>
-                      </div>
-                    </div>
-                    <div className="text-right space-y-2">
-                      <div className="w-20 h-4 bg-gray-200 rounded ml-auto"></div>
-                      <div className="w-16 h-3 bg-gray-200 rounded ml-auto"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {revenueReports.map((report) => {
-                const netRevenue = report.total_revenue - report.total_discount;
-                const discountRate =
-                  (report.total_discount / report.total_revenue) * 100;
-
-                return (
-                  <div
-                    key={report.id}
-                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Calendar className="h-6 w-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {new Date(report.report_date).toLocaleDateString(
-                            "vi-VN",
-                            {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            }
-                          )}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <span>
-                            {formatNumber(report.total_orders)} orders
-                          </span>
-                          <span>•</span>
-                          <span>
-                            {formatPercentage(discountRate)} discount rate
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-right space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold text-gray-900">
-                          {formatCurrency(report.total_revenue)}
-                        </span>
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        Net: {formatCurrency(netRevenue)}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {revenueReports.length === 0 && (
-                <div className="text-center py-8">
-                  <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">
-                    No Revenue Data
-                  </h4>
-                  <p className="text-gray-600">
-                    No revenue reports found for the selected date range.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-
-        {/* Additional Insights */}
-        {revenueStats && !loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6">
-              <h4 className="text-md font-semibold text-gray-900 mb-4">
-                Performance Insights
-              </h4>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Revenue Growth</span>
-                  <div className="flex items-center gap-2">
-                    {revenueStats.revenueGrowth >= 0 ? (
-                      <TrendingUp className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4 text-red-600" />
-                    )}
-                    <span
-                      className={`text-sm font-medium ${
-                        revenueStats.revenueGrowth >= 0
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {formatPercentage(revenueStats.revenueGrowth)}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Discount Impact</span>
-                  <span className="text-sm font-medium">
-                    -{formatCurrency(revenueStats.totalDiscount)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Commission Fees</span>
-                  <span className="text-sm font-medium">
-                    -{formatCurrency(revenueStats.totalCommission)}
-                  </span>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <h4 className="text-md font-semibold text-gray-900 mb-4">
-                Quick Actions
-              </h4>
-              <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate Detailed Report
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Schedule Report
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  View Analytics
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )}
+        {/* Top Products */}
+        <TopProducts products={topProducts} loading={false} />
       </div>
     </MainLayout>
   );

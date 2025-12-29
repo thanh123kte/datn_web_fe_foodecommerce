@@ -6,12 +6,10 @@ import {
   Wallet,
   TrendingUp,
   TrendingDown,
-  DollarSign,
-  CreditCard,
   ArrowUpCircle,
   ArrowDownCircle,
-  Clock,
   Activity,
+  DollarSign,
 } from "lucide-react";
 
 // Utility function to format currency (Vietnamese Dong)

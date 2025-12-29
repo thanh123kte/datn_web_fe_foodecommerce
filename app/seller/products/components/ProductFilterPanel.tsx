@@ -213,7 +213,6 @@ export default function ProductFilterPanel({
             {/* Price Range */}
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                <DollarSign className="w-4 h-4 inline mr-1" />
                 Price Range (VND)
               </Label>
               <div className="grid grid-cols-2 gap-3">

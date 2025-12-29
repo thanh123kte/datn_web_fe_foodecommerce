@@ -119,7 +119,6 @@ export function CategoryTable({
               >
                 <option value="created_at">Sắp xếp theo ngày tạo</option>
                 <option value="name">Sắp xếp theo tên</option>
-                <option value="products_count">Sắp xếp theo số sản phẩm</option>
               </select>
             </div>
           </div>
@@ -148,19 +147,6 @@ export function CategoryTable({
                 </button>
               </th>
               <th className="text-left p-4 font-medium text-gray-700">Mô tả</th>
-              <th className="text-left p-4 font-medium text-gray-700">
-                <button
-                  onClick={() => handleSort("products_count")}
-                  className="flex items-center gap-1 hover:text-blue-600"
-                >
-                  Sản phẩm
-                  {sortField === "products_count" && (
-                    <span className="text-xs">
-                      {sortDirection === "asc" ? "↑" : "↓"}
-                    </span>
-                  )}
-                </button>
-              </th>
               <th className="text-left p-4 font-medium text-gray-700">
                 <button
                   onClick={() => handleSort("created_at")}
@@ -218,14 +204,6 @@ export function CategoryTable({
                 <td className="p-4">
                   <div className="text-sm text-gray-600 max-w-xs truncate">
                     {category.description}
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-1">
-                    <span className="font-semibold text-blue-600">
-                      {category.products_count || 0}
-                    </span>
-                    <span className="text-sm text-gray-500">sản phẩm</span>
                   </div>
                 </td>
                 <td className="p-4">

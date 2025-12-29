@@ -196,9 +196,16 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
               <div className="text-xs text-yellow-800">
                 <p className="font-medium mb-1">Lưu ý quan trọng:</p>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>Thời gian xử lý: 1-3 ngày làm việc</li>
+                  <li>
+                    Số tiền sẽ bị trừ ngay khỏi ví và chuyển sang trạng thái{" "}
+                    <strong>&quot;Chờ duyệt&quot;</strong>
+                  </li>
+                  <li>
+                    Admin sẽ xét duyệt yêu cầu rút tiền trong vòng 1-3 ngày làm
+                    việc
+                  </li>
                   <li>Kiểm tra kỹ số tài khoản trước khi xác nhận</li>
-                  <li>Không thể hoàn tác sau khi rút tiền</li>
+                  <li>Nếu bị từ chối, tiền sẽ được hoàn lại vào ví của bạn</li>
                 </ul>
               </div>
             </div>

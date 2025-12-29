@@ -1,6 +1,7 @@
 "use client";
 
 import { Conversation } from "@/types/chat";
+import { buildAbsoluteUrl } from "@/lib/utils";
 
 const formatTimeAgo = (dateString: string): string => {
   const now = new Date().getTime();
@@ -19,25 +20,18 @@ const formatTimeAgo = (dateString: string): string => {
 
 interface ConversationListProps {
   conversations: Conversation[];
-  currentUserId: number;
+  currentUserId: string | null;
   selectedConversationId?: number;
   onSelectConversation: (conversation: Conversation) => void;
 }
 
 export function ConversationList({
   conversations,
-  currentUserId,
   selectedConversationId,
   onSelectConversation,
 }: ConversationListProps) {
   const getOtherUser = (conversation: Conversation) => {
-    if (currentUserId === conversation.customer_id) {
-      return {
-        id: conversation.seller_id,
-        name: conversation.seller_name,
-        avatar: conversation.seller_avatar,
-      };
-    }
+    // Seller web - currentUserId is always seller_id, otherUser is always customer
     return {
       id: conversation.customer_id,
       name: conversation.customer_name,
@@ -73,13 +67,13 @@ export function ConversationList({
                   <div className="w-12 h-12 rounded-full overflow-hidden">
                     {otherUser.avatar ? (
                       <img
-                        src={otherUser.avatar}
+                        src={buildAbsoluteUrl(otherUser.avatar)}
                         alt={otherUser.name}
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                        {otherUser.name.charAt(0).toUpperCase()}
+                        {otherUser.name.charAt(0).toUpperCase() || ""}
                       </div>
                     )}
                   </div>

@@ -6,7 +6,6 @@ import {
   MessageSquare,
   ThumbsUp,
   Image as ImageIcon,
-  Trash2,
 } from "lucide-react";
 import {
   Card,
@@ -15,13 +14,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ReviewFilters } from "@/components/admin/ReviewFilters";
-import { resolveMediaUrl } from "@/lib/utils/imageUtils";
+import { AdminReviewList } from "./components/AdminReviewList";
 
 interface Store {
   id: number;
   name: string;
+}
+
+interface ReviewImage {
+  id: number;
+  imageUrl: string;
+  createdAt: string;
 }
 
 interface Review {
@@ -31,11 +35,13 @@ interface Review {
   storeName: string;
   customerId: string;
   customerName: string;
+  customerAvatar?: string;
   rating: number;
   comment: string;
-  imageUrl?: string;
+  images: ReviewImage[];
+  reply?: string;
+  repliedAt?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 export default function AdminReviewsPage() {
@@ -112,8 +118,8 @@ export default function AdminReviewsPage() {
       !selectedRating || review.rating.toString() === selectedRating;
     const matchesImage =
       !hasImage ||
-      (hasImage === "true" && review.imageUrl) ||
-      (hasImage === "false" && !review.imageUrl);
+      (hasImage === "true" && review.images && review.images.length > 0) ||
+      (hasImage === "false" && (!review.images || review.images.length === 0));
 
     return matchesSearch && matchesStore && matchesRating && matchesImage;
   });
@@ -127,20 +133,7 @@ export default function AdminReviewsPage() {
           ).toFixed(1)
         : "0",
     positive: reviews.filter((r) => r.rating >= 4).length,
-    withImages: reviews.filter((r) => r.imageUrl).length,
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) return `${diffMins} phút trước`;
-    if (diffHours < 24) return `${diffHours} giờ trước`;
-    return `${diffDays} ngày trước`;
+    withImages: reviews.filter((r) => r.images && r.images.length > 0).length,
   };
 
   return (
@@ -243,85 +236,11 @@ export default function AdminReviewsPage() {
           </div>
 
           {/* Reviews List */}
-          {loading ? (
-            <div className="text-center py-8 text-gray-500">Đang tải...</div>
-          ) : filteredReviews.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Không tìm thấy đánh giá nào
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredReviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                >
-                  {/* Review Image (if exists) - Left side */}
-                  {review.imageUrl && (
-                    <div className="flex-shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={resolveMediaUrl(review.imageUrl)}
-                        alt="Review"
-                        className="w-32 h-32 object-cover rounded-lg border border-gray-200"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Review Content - Middle */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {review.customerName ||
-                          `Khách hàng #${review.customerId}`}
-                      </p>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      Cửa hàng: {review.storeName}
-                    </p>
-                    <div className="flex items-center gap-1 mb-2">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i < review.rating
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                      <span className="ml-2 text-sm font-medium text-gray-700">
-                        {review.rating}/5
-                      </span>
-                    </div>
-                    {review.comment && (
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                        {review.comment}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-2">
-                      {formatDate(review.createdAt)}
-                    </p>
-                  </div>
-
-                  {/* Delete Button - Right side */}
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDeleteReview(review.id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Xóa
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <AdminReviewList
+            reviews={filteredReviews}
+            loading={loading}
+            onDeleteReview={handleDeleteReview}
+          />
         </CardContent>
       </Card>
     </div>

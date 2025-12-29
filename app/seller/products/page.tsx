@@ -251,8 +251,13 @@ export default function ProductsPage() {
 
     setModalLoading(true);
     try {
-      await productService.delete(Number(selectedProduct.id));
-      await loadProducts();
+      await productService.softDelete(Number(selectedProduct.id));
+
+      // Remove from local state immediately
+      setProducts((prevProducts) =>
+        prevProducts.filter((product) => product.id !== selectedProduct.id)
+      );
+
       setShowDeleteModal(false);
       setSelectedProduct(null);
     } catch (error) {

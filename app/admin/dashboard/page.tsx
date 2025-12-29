@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 import {
   Users,
   Package,
@@ -18,45 +19,83 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-const statsCards = [
-  {
-    title: "Tổng người dùng",
-    value: "2,847",
-    change: "+12%",
-    trend: "up",
-    icon: Users,
-    description: "Người dùng hoạt động tháng này",
-  },
-  {
-    title: "Tổng sản phẩm",
-    value: "1,234",
-    change: "+8%",
-    trend: "up",
-    icon: Package,
-    description: "Sản phẩm trong kho",
-  },
-  {
-    title: "Tổng đơn hàng",
-    value: "5,672",
-    change: "+23%",
-    trend: "up",
-    icon: ShoppingCart,
-    description: "Đơn hàng trong tháng",
-  },
-  {
-    title: "Doanh thu",
-    value: "$45,231",
-    change: "-3%",
-    trend: "down",
-    icon: DollarSign,
-    description: "Doanh thu tháng này",
-  },
-];
+import {
+  dashboardService,
+  AdminDashboardStats,
+  PlatformSalesStats,
+  RecentUser,
+} from "@/lib/services/dashboardService";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const displayName = user?.displayName || user?.email || "Admin";
+  const [stats, setStats] = useState<AdminDashboardStats | null>(null);
+  const [revenueStats, setRevenueStats] = useState<PlatformSalesStats | null>(
+    null
+  );
+  const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [revenueLoading, setRevenueLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const data = await dashboardService.getAdminStats();
+        setStats(data);
+      } catch (error) {
+        console.error("Error fetching admin stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchRevenueStats = async () => {
+      try {
+        setRevenueLoading(true);
+        const data = await dashboardService.getPlatformSalesStats("monthly");
+        setRevenueStats(data);
+      } catch (error) {
+        console.error("Error fetching revenue stats:", error);
+      } finally {
+        setRevenueLoading(false);
+      }
+    };
+
+    const fetchRecentUsers = async () => {
+      try {
+        setUsersLoading(true);
+        const data = await dashboardService.getRecentUsers(5);
+        setRecentUsers(data);
+      } catch (error) {
+        console.error("Error fetching recent users:", error);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+
+    fetchStats();
+    fetchRevenueStats();
+    fetchRecentUsers();
+  }, []);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
 
   return (
     <div className="space-y-8">
@@ -73,45 +112,89 @@ export default function AdminDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsCards.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card
-              key={index}
-              className="hover:shadow-lg transition-shadow duration-200"
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {stat.title}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {stat.value}
-                </div>
-                <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
-                  <span
-                    className={`flex items-center ${
-                      stat.trend === "up" ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {stat.trend === "up" ? (
-                      <TrendingUp className="h-3 w-3 mr-1" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 mr-1" />
-                    )}
-                    {stat.change}
-                  </span>
-                  <span>từ tháng trước</span>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Tổng người dùng
+            </CardTitle>
+            <Users className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {loading ? (
+                <span className="animate-pulse">...</span>
+              ) : (
+                stats?.totalUsers.toLocaleString("vi-VN") || "0"
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Người dùng hoạt động
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Tổng sản phẩm
+            </CardTitle>
+            <Package className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {loading ? (
+                <span className="animate-pulse">...</span>
+              ) : (
+                stats?.totalProducts.toLocaleString("vi-VN") || "0"
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Sản phẩm trong hệ thống
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Tổng đơn hàng
+            </CardTitle>
+            <ShoppingCart className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {loading ? (
+                <span className="animate-pulse">...</span>
+              ) : (
+                stats?.totalOrders.toLocaleString("vi-VN") || "0"
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Đơn hàng đã tạo
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow duration-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Doanh thu
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {loading ? (
+                <span className="animate-pulse">...</span>
+              ) : (
+                formatCurrency(stats?.totalRevenue || 0)
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Tổng doanh thu
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Charts Section */}
@@ -124,18 +207,105 @@ export default function AdminDashboard() {
               Tổng quan doanh thu
             </CardTitle>
             <CardDescription>
-              Doanh thu hàng tháng trong 6 tháng qua
+              Doanh thu theo ngày trong tháng hiện tại
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-center">
-                <BarChart3 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">
-                  Biểu đồ sẽ được triển khai ở đây
-                </p>
+            {revenueLoading ? (
+              <div className="h-80 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-center">
+                  <BarChart3 className="h-12 w-12 mx-auto text-gray-400 mb-4 animate-pulse" />
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Đang tải dữ liệu...
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : revenueStats && revenueStats.points.length > 0 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Tổng đơn hàng
+                    </p>
+                    <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                      {revenueStats.totalOrders.toLocaleString("vi-VN")}
+                    </p>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Tổng doanh thu
+                    </p>
+                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                      {formatCurrency(revenueStats.totalRevenue)}
+                    </p>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={revenueStats.points.map((point) => ({
+                      date: new Date(point.label).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                      }),
+                      revenue: point.revenue,
+                      orders: point.orders,
+                    }))}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      className="stroke-gray-300 dark:stroke-gray-700"
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: "currentColor" }}
+                      className="text-xs text-gray-600 dark:text-gray-400"
+                    />
+                    <YAxis
+                      tick={{ fill: "currentColor" }}
+                      className="text-xs text-gray-600 dark:text-gray-400"
+                      tickFormatter={(value) =>
+                        `${(value / 1000000).toFixed(1)}M`
+                      }
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "0.5rem",
+                      }}
+                      formatter={(value: number, name: string) => {
+                        if (name === "revenue") {
+                          return [formatCurrency(value), "Doanh thu"];
+                        }
+                        return [value, "Đơn hàng"];
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ paddingTop: "20px" }}
+                      formatter={(value) =>
+                        value === "revenue" ? "Doanh thu" : "Đơn hàng"
+                      }
+                    />
+                    <Bar
+                      dataKey="revenue"
+                      fill="#3b82f6"
+                      radius={[8, 8, 0, 0]}
+                      name="revenue"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-80 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-center">
+                  <BarChart3 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Chưa có dữ liệu doanh thu
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -144,90 +314,90 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              Hoạt động người dùng
+              Người dùng mới nhất
             </CardTitle>
-            <CardDescription>
-              Người dùng hoạt động hàng ngày trong 7 ngày qua
-            </CardDescription>
+            <CardDescription>5 người dùng đăng ký gần đây nhất</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-center">
-                <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">
-                  Biểu đồ hoạt động sẽ được triển khai ở đây
-                </p>
+            {usersLoading ? (
+              <div className="h-80 flex items-center justify-center">
+                <div className="text-center">
+                  <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4 animate-pulse" />
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Đang tải dữ liệu...
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : recentUsers.length > 0 ? (
+              <div className="space-y-4">
+                {recentUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <div className="flex-shrink-0">
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.displayName || user.email}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                          {(user.displayName || user.email)
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {user.displayName || "Chưa có tên"}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {user.email}
+                      </p>
+                      {user.phoneNumber && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          {user.phoneNumber}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(user.createdAt).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                      </p>
+                      <div className="flex gap-1 mt-1 justify-end">
+                        {user.roles.map((role) => (
+                          <span
+                            key={role}
+                            className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded"
+                          >
+                            {role}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-80 flex items-center justify-center">
+                <div className="text-center">
+                  <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Chưa có người dùng nào
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Hoạt động gần đây</CardTitle>
-          <CardDescription>Các hoạt động và thông báo mới nhất</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[
-              {
-                action: "Người dùng mới đăng ký",
-                user: "John Doe",
-                time: "2 phút trước",
-                type: "user",
-              },
-              {
-                action: "Thêm sản phẩm vào kho",
-                user: "Admin",
-                time: "5 phút trước",
-                type: "product",
-              },
-              {
-                action: "Đơn hàng #12345 hoàn thành",
-                user: "Hệ thống",
-                time: "10 phút trước",
-                type: "order",
-              },
-              {
-                action: "Người bán mới đăng ký",
-                user: "Jane Smith",
-                time: "15 phút trước",
-                type: "seller",
-              },
-            ].map((activity, index) => (
-              <div
-                key={index}
-                className="flex items-center space-x-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    activity.type === "user"
-                      ? "bg-blue-500"
-                      : activity.type === "product"
-                      ? "bg-green-500"
-                      : activity.type === "order"
-                      ? "bg-orange-500"
-                      : "bg-purple-500"
-                  }`}
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {activity.action}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    bởi {activity.user}
-                  </p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {activity.time}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

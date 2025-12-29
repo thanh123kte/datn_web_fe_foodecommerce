@@ -8,7 +8,7 @@ export enum MessageType {
 export interface Message {
   id: number;
   conversation_id: number;
-  sender_id: number;
+  sender_id: string;
   sender_name: string;
   content: string;
   message_type: MessageType;
@@ -19,10 +19,10 @@ export interface Message {
 
 export interface Conversation {
   id: number;
-  customer_id: number;
+  customer_id: string;
   customer_name: string;
   customer_avatar?: string;
-  seller_id: number;
+  seller_id: string;
   seller_name: string;
   seller_avatar?: string;
   last_message?: string;

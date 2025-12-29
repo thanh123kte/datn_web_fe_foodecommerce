@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { CategoryTable } from "@/components/admin/CategoryTable";
-import { CategoryStatsComponent } from "@/components/admin/CategoryStats";
 import {
   AdminCategoryFormModal,
   AdminCategoryFormData,
@@ -268,10 +267,10 @@ export default function AdminCategoriesPage() {
     if (!selectedCategory) return;
 
     try {
-      // Call API to delete category
-      await categoriesService.deleteCategory(selectedCategory.id);
+      // Call API to soft delete category
+      await categoriesService.softDeleteCategory(selectedCategory.id);
 
-      // Update local state
+      // Remove from local state immediately
       setCategories((prevCategories) =>
         prevCategories.filter((category) => category.id !== selectedCategory.id)
       );
@@ -286,16 +285,6 @@ export default function AdminCategoriesPage() {
         inactive_categories: !selectedCategory.is_active
           ? prevStats.inactive_categories - 1
           : prevStats.inactive_categories,
-        total_products:
-          prevStats.total_products - (selectedCategory.products_count || 0),
-        categories_with_products:
-          (selectedCategory.products_count || 0) > 0
-            ? prevStats.categories_with_products - 1
-            : prevStats.categories_with_products,
-        categories_without_products:
-          (selectedCategory.products_count || 0) === 0
-            ? prevStats.categories_without_products - 1
-            : prevStats.categories_without_products,
       }));
 
       toast.success("Category deleted successfully");
@@ -347,9 +336,6 @@ export default function AdminCategoriesPage() {
           Add Category
         </Button>
       </div>
-
-      {/* Stats Overview */}
-      <CategoryStatsComponent stats={stats} loading={loading} />
 
       {/* Categories Table */}
       <div>

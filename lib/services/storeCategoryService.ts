@@ -69,9 +69,14 @@ class StoreCategoryService {
     return response.data;
   }
 
-  // Xóa store category
+  // Xóa store category (hard delete)
   async delete(id: number): Promise<void> {
     await axiosInstance.delete(`${this.basePath}/${id}`);
+  }
+
+  // Xóa mềm store category (soft delete)
+  async softDelete(id: number): Promise<void> {
+    await axiosInstance.put(`${this.basePath}/${id}/soft-delete`);
   }
 
   // Lấy tất cả categories cho một store với filters

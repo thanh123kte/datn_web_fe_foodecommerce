@@ -52,7 +52,6 @@ export const RevenueStatsCards: React.FC<RevenueStatsCardsProps> = ({
       value: formatCurrency(stats.totalRevenue),
       subtitle: `from ${formatNumber(stats.totalOrders)} orders`,
       growth: stats.revenueGrowth,
-      icon: <DollarSign className="h-5 w-5" />,
       color: "bg-blue-500",
     },
     {

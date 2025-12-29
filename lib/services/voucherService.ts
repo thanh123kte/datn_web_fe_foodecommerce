@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from "@/lib/api/axiosConfig";
 import { Voucher, DiscountStatus, DiscountType } from "@/types/promotion";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
@@ -14,7 +14,7 @@ interface CreateVoucherDto {
   startDate: string | null;
   endDate: string | null;
   usageLimit: number;
-  sellerId?: number;
+  storeId?: number;
   status: DiscountStatus;
   isActive?: boolean;
   isCreatedByAdmin: boolean;
@@ -31,7 +31,7 @@ interface UpdateVoucherDto {
   startDate?: string | null;
   endDate?: string | null;
   usageLimit?: number;
-  sellerId?: number;
+  storeId?: number;
   status?: DiscountStatus;
   isActive?: boolean;
   isCreatedByAdmin?: boolean;
@@ -49,8 +49,8 @@ interface VoucherResponseDto {
   startDate: string;
   endDate: string;
   usageLimit: number;
-  sellerId: number | null;
-  sellerName: string | null;
+  storeId: number | null;
+  storeName: string | null;
   status: DiscountStatus;
   isActive: boolean;
   isCreatedByAdmin: boolean;
@@ -72,10 +72,10 @@ const convertToVoucher = (dto: VoucherResponseDto): Voucher => {
     end_date: dto.endDate,
     usage_limit: dto.usageLimit,
     used_count: 0, // Backend doesn't provide this yet
-    seller_id: dto.sellerId || undefined,
+    store_id: dto.storeId || undefined,
     status: dto.status,
     is_created_by_admin: dto.isCreatedByAdmin,
-    store_name: dto.sellerName || undefined,
+    store_name: dto.storeName || undefined,
     remaining_uses: dto.usageLimit, // Calculate: usageLimit - usedCount
   };
 };
@@ -86,14 +86,14 @@ const convertToCreateDto = (voucher: Partial<Voucher>): CreateVoucherDto => {
     code: voucher.code || "",
     title: voucher.title || "",
     description: "",
-    discountType: voucher.discount_type || DiscountType.PERCENT,
+    discountType: voucher.discount_type || DiscountType.PERCENTAGE,
     discountValue: voucher.discount_value || 0,
     minOrderValue: voucher.min_order_value || 0,
     maxDiscount: voucher.max_discount || 0,
     startDate: voucher.start_date || null,
     endDate: voucher.end_date || null,
     usageLimit: voucher.usage_limit || 0,
-    sellerId: voucher.seller_id,
+    storeId: voucher.store_id,
     status: voucher.status || DiscountStatus.ACTIVE,
     isActive: true,
     isCreatedByAdmin: voucher.is_created_by_admin ?? true,
@@ -116,7 +116,7 @@ const convertToUpdateDto = (voucher: Partial<Voucher>): UpdateVoucherDto => {
   if (voucher.start_date !== undefined) dto.startDate = voucher.start_date;
   if (voucher.end_date !== undefined) dto.endDate = voucher.end_date;
   if (voucher.usage_limit !== undefined) dto.usageLimit = voucher.usage_limit;
-  if (voucher.seller_id !== undefined) dto.sellerId = voucher.seller_id;
+  if (voucher.store_id !== undefined) dto.storeId = voucher.store_id;
   if (voucher.status) {
     dto.status = voucher.status;
     dto.isActive = voucher.status === DiscountStatus.ACTIVE;
@@ -131,10 +131,12 @@ export const voucherService = {
   // Get all vouchers
   getAllVouchers: async (): Promise<Voucher[]> => {
     try {
-      const response = await axios.get<VoucherResponseDto[]>(
+      const response = await axiosInstance.get<VoucherResponseDto[]>(
         `${API_BASE_URL}/api/vouchers`
       );
-      return response.data.map(convertToVoucher);
+      return Array.isArray(response.data)
+        ? response.data.map(convertToVoucher)
+        : [];
     } catch (error) {
       console.error("Error fetching vouchers:", error);
       throw error;
@@ -144,7 +146,7 @@ export const voucherService = {
   // Get voucher by ID
   getVoucherById: async (id: number): Promise<Voucher> => {
     try {
-      const response = await axios.get<VoucherResponseDto>(
+      const response = await axiosInstance.get<VoucherResponseDto>(
         `${API_BASE_URL}/api/vouchers/${id}`
       );
       return convertToVoucher(response.data);
@@ -154,15 +156,17 @@ export const voucherService = {
     }
   },
 
-  // Get vouchers by seller
-  getVouchersBySeller: async (sellerId: number): Promise<Voucher[]> => {
+  // Get vouchers by store
+  getVouchersByStore: async (storeId: number): Promise<Voucher[]> => {
     try {
-      const response = await axios.get<VoucherResponseDto[]>(
-        `${API_BASE_URL}/api/vouchers/seller/${sellerId}`
+      const response = await axiosInstance.get<VoucherResponseDto[]>(
+        `${API_BASE_URL}/api/vouchers/store/${storeId}/isnot_deleted`
       );
-      return response.data.map(convertToVoucher);
+      return Array.isArray(response.data)
+        ? response.data.map(convertToVoucher)
+        : [];
     } catch (error) {
-      console.error(`Error fetching vouchers for seller ${sellerId}:`, error);
+      console.error(`Error fetching vouchers for store ${storeId}:`, error);
       throw error;
     }
   },
@@ -170,10 +174,12 @@ export const voucherService = {
   // Get vouchers by discount type
   getVouchersByType: async (discountType: DiscountType): Promise<Voucher[]> => {
     try {
-      const response = await axios.get<VoucherResponseDto[]>(
+      const response = await axiosInstance.get<VoucherResponseDto[]>(
         `${API_BASE_URL}/api/vouchers/type/${discountType}`
       );
-      return response.data.map(convertToVoucher);
+      return Array.isArray(response.data)
+        ? response.data.map(convertToVoucher)
+        : [];
     } catch (error) {
       console.error(`Error fetching vouchers for type ${discountType}:`, error);
       throw error;
@@ -183,10 +189,12 @@ export const voucherService = {
   // Get admin vouchers
   getAdminVouchers: async (): Promise<Voucher[]> => {
     try {
-      const response = await axios.get<VoucherResponseDto[]>(
+      const response = await axiosInstance.get<VoucherResponseDto[]>(
         `${API_BASE_URL}/api/vouchers/admin`
       );
-      return response.data.map(convertToVoucher);
+      return Array.isArray(response.data)
+        ? response.data.map(convertToVoucher)
+        : [];
     } catch (error) {
       console.error("Error fetching admin vouchers:", error);
       throw error;
@@ -196,10 +204,12 @@ export const voucherService = {
   // Get store vouchers
   getStoreVouchers: async (): Promise<Voucher[]> => {
     try {
-      const response = await axios.get<VoucherResponseDto[]>(
+      const response = await axiosInstance.get<VoucherResponseDto[]>(
         `${API_BASE_URL}/api/vouchers/store`
       );
-      return response.data.map(convertToVoucher);
+      return Array.isArray(response.data)
+        ? response.data.map(convertToVoucher)
+        : [];
     } catch (error) {
       console.error("Error fetching store vouchers:", error);
       throw error;
@@ -210,7 +220,7 @@ export const voucherService = {
   createVoucher: async (voucher: Partial<Voucher>): Promise<Voucher> => {
     try {
       const dto = convertToCreateDto(voucher);
-      const response = await axios.post<VoucherResponseDto>(
+      const response = await axiosInstance.post<VoucherResponseDto>(
         `${API_BASE_URL}/api/vouchers`,
         dto
       );
@@ -228,7 +238,7 @@ export const voucherService = {
   ): Promise<Voucher> => {
     try {
       const dto = convertToUpdateDto(voucher);
-      const response = await axios.put<VoucherResponseDto>(
+      const response = await axiosInstance.put<VoucherResponseDto>(
         `${API_BASE_URL}/api/vouchers/${id}`,
         dto
       );
@@ -239,12 +249,22 @@ export const voucherService = {
     }
   },
 
-  // Delete voucher
+  // Delete voucher (hard delete)
   deleteVoucher: async (id: number): Promise<void> => {
     try {
-      await axios.delete(`${API_BASE_URL}/api/vouchers/${id}`);
+      await axiosInstance.delete(`${API_BASE_URL}/api/vouchers/${id}`);
     } catch (error) {
       console.error(`Error deleting voucher ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Soft delete voucher
+  softDeleteVoucher: async (id: number): Promise<void> => {
+    try {
+      await axiosInstance.put(`${API_BASE_URL}/api/vouchers/${id}/soft-delete`);
+    } catch (error) {
+      console.error(`Error soft deleting voucher ${id}:`, error);
       throw error;
     }
   },

@@ -123,9 +123,19 @@ export default function BannersPage() {
     }
 
     try {
-      await bannerService.deleteBanner(bannerId);
+      await bannerService.softDeleteBanner(bannerId);
+
+      // Remove from local state immediately
+      setBanners((prevBanners) =>
+        prevBanners.filter((banner) => banner.id !== bannerId)
+      );
+
+      // Recalculate stats
+      const updatedBanners = banners.filter((b) => b.id !== bannerId);
+      const calculatedStats = bannerService.calculateStats(updatedBanners);
+      setStats(calculatedStats);
+
       toast.success("Xóa banner thành công");
-      fetchBanners(); // Refresh data
     } catch (error) {
       console.error("Error deleting banner:", error);
       toast.error("Không thể xóa banner");

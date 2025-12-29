@@ -138,9 +138,37 @@ export default function VouchersPage() {
     }
 
     try {
-      await voucherService.deleteVoucher(voucherId);
+      await voucherService.softDeleteVoucher(voucherId);
+
+      // Remove from local state immediately
+      setAdminVouchers((prev) => prev.filter((v) => v.id !== voucherId));
+      setStoreVouchers((prev) => prev.filter((v) => v.id !== voucherId));
+
+      // Recalculate stats
+      const updatedAdminVouchers = adminVouchers.filter(
+        (v) => v.id !== voucherId
+      );
+      const updatedStoreVouchers = storeVouchers.filter(
+        (v) => v.id !== voucherId
+      );
+      const allVouchers = [...updatedAdminVouchers, ...updatedStoreVouchers];
+      const calculatedStats = voucherService.calculateStats(allVouchers);
+      setStats((prev) => ({
+        ...prev,
+        ...calculatedStats,
+        most_used_vouchers: allVouchers
+          .sort((a, b) => b.used_count - a.used_count)
+          .slice(0, 5),
+        recent_vouchers: allVouchers
+          .sort(
+            (a, b) =>
+              new Date(b.start_date).getTime() -
+              new Date(a.start_date).getTime()
+          )
+          .slice(0, 3),
+      }));
+
       toast.success("Xóa voucher thành công");
-      fetchVouchers();
     } catch (error) {
       console.error("Error deleting voucher:", error);
       toast.error("Không thể xóa voucher");
@@ -162,8 +190,8 @@ export default function VouchersPage() {
       return false;
     }
     if (
-      voucherFilters.seller_id &&
-      voucher.seller_id !== voucherFilters.seller_id
+      voucherFilters.store_id &&
+      voucher.store_id !== voucherFilters.store_id
     ) {
       return false;
     }
@@ -198,7 +226,7 @@ export default function VouchersPage() {
           <Button>Tạo Voucher Mới</Button>
         </Link>
       </div>
-       {/* Quick Stats Cards */}
+      {/* Quick Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg text-white">
           <div className="text-2xl font-bold">{stats.active_vouchers}</div>
@@ -217,7 +245,6 @@ export default function VouchersPage() {
           <div className="text-orange-100">Người Bán Tạo</div>
         </div>
       </div>
-
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -258,7 +285,6 @@ export default function VouchersPage() {
             {activeTab === "admin" ? "Voucher Admin" : "Voucher Cửa Hàng"} (
             {filteredVouchers.length})
           </h2>
-          
         </div>
 
         <VoucherTable
@@ -270,8 +296,6 @@ export default function VouchersPage() {
           onDelete={handleVoucherDelete}
         />
       </div>
-
-     
 
       {/* Voucher Detail Modal */}
       <VoucherDetailModal

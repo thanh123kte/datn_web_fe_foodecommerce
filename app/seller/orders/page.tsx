@@ -18,7 +18,6 @@ import {
   MoreHorizontal,
   ArrowRight,
   TrendingUp,
-  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -239,8 +238,10 @@ export default function OrdersPage() {
 
     setUpdateLoading(true);
     try {
-      // TODO: Implement API call to update order status
-      // For now, just update local state
+      // Call API to update order status
+      await orderService.updateStatus(Number(selectedOrder.id), status);
+
+      // Update local state
       const updatedOrder = {
         ...selectedOrder,
         orderStatus: status,
@@ -253,12 +254,15 @@ export default function OrdersPage() {
           order.id === updatedOrder.id ? updatedOrder : order
         )
       );
+
       setShowStatusModal(false);
       setSelectedOrder(null);
+
       // Reload stats
       await loadOrders();
     } catch (error) {
       console.error("Error updating order status:", error);
+      alert("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại.");
     } finally {
       setUpdateLoading(false);
     }
@@ -388,7 +392,6 @@ export default function OrdersPage() {
                     {formatPrice(stats.totalRevenue).replace("₫", "")}k
                   </p>
                 </div>
-                <DollarSign className="w-8 h-8 text-green-600" />
               </div>
             </Card>
           </div>

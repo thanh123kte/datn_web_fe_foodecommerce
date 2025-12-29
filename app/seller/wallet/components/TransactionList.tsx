@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   WalletTransactionResponseDto,
   TransactionType,
+  TransactionStatus,
 } from "@/lib/services/walletService";
 import {
   ArrowUpCircle,
@@ -153,6 +154,28 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
                   <Hash className="h-3 w-3" />
                   {transaction.referenceType}: {transaction.referenceId}
                 </div>
+              )}
+              {/* Transaction Status Badge */}
+              {transaction.status && (
+                <Badge
+                  className={`text-xs ${
+                    transaction.status === TransactionStatus.SUCCESSFUL
+                      ? "bg-green-100 text-green-700"
+                      : transaction.status === TransactionStatus.PENDING
+                      ? "bg-yellow-100 text-yellow-700"
+                      : transaction.status === TransactionStatus.REJECTED
+                      ? "bg-red-100 text-red-700"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {transaction.status === TransactionStatus.SUCCESSFUL
+                    ? "Hoàn thành"
+                    : transaction.status === TransactionStatus.PENDING
+                    ? "Chờ duyệt"
+                    : transaction.status === TransactionStatus.REJECTED
+                    ? "Thất bại"
+                    : transaction.status}
+                </Badge>
               )}
             </div>
 
