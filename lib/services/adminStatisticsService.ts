@@ -4,6 +4,13 @@ const API_BASE_URL = `${
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 }/api`;
 
+// Create axios instance with ngrok bypass header
+const axiosInstance = axios.create({
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
+});
+
 // ===== INTERFACES =====
 
 export interface OverallStats {
@@ -87,19 +94,63 @@ class AdminStatisticsService {
    */
   async getOverallStats(): Promise<OverallStats> {
     try {
+      console.log("[AdminStatistics] Fetching overall stats...");
+
       // Since backend doesn't have a dedicated admin stats endpoint yet,
       // we'll aggregate from multiple endpoints
       const [ordersRes, usersRes, storesRes, productsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/orders`),
-        axios.get(`${API_BASE_URL}/users`),
-        axios.get(`${API_BASE_URL}/stores`),
-        axios.get(`${API_BASE_URL}/products`),
+        axiosInstance.get(`${API_BASE_URL}/orders`).catch((err) => {
+          console.error(
+            "[AdminStatistics] Failed to fetch orders:",
+            err.response?.status,
+            err.message
+          );
+          return { data: [] };
+        }),
+        axiosInstance.get(`${API_BASE_URL}/users`).catch((err) => {
+          console.error(
+            "[AdminStatistics] Failed to fetch users:",
+            err.response?.status,
+            err.message
+          );
+          return { data: [] };
+        }),
+        axiosInstance.get(`${API_BASE_URL}/stores`).catch((err) => {
+          console.error(
+            "[AdminStatistics] Failed to fetch stores:",
+            err.response?.status,
+            err.message
+          );
+          return { data: [] };
+        }),
+        axiosInstance.get(`${API_BASE_URL}/products`).catch((err) => {
+          console.error(
+            "[AdminStatistics] Failed to fetch products:",
+            err.response?.status,
+            err.message
+          );
+          return { data: [] };
+        }),
       ]);
 
-      const orders = ordersRes.data || [];
-      const users = usersRes.data || [];
-      const stores = storesRes.data || [];
-      const products = productsRes.data || [];
+      console.log("[AdminStatistics] Response data:", {
+        orders: ordersRes.data,
+        users: usersRes.data,
+        stores: storesRes.data,
+        products: productsRes.data,
+      });
+
+      const orders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+      const users = Array.isArray(usersRes.data) ? usersRes.data : [];
+      const stores = Array.isArray(storesRes.data) ? storesRes.data : [];
+      const products = Array.isArray(productsRes.data) ? productsRes.data : [];
+
+      console.log("[AdminStatistics] Parsed arrays:", {
+        ordersCount: orders.length,
+        usersCount: users.length,
+        storesCount: stores.length,
+        productsCount: products.length,
+      });
 
       // Calculate statistics
       const totalRevenue = orders.reduce(
@@ -163,8 +214,8 @@ class AdminStatisticsService {
   ): Promise<RevenueStats> {
     try {
       // Fetch all orders
-      const response = await axios.get(`${API_BASE_URL}/orders`);
-      const orders = response.data || [];
+      const response = await axiosInstance.get(`${API_BASE_URL}/orders`);
+      const orders = Array.isArray(response.data) ? response.data : [];
 
       // Filter by date range if provided
       let filteredOrders = orders;
@@ -223,7 +274,7 @@ class AdminStatisticsService {
     period: "daily" | "weekly" | "monthly" = "monthly"
   ): Promise<UserGrowthStats> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/users`);
+      const response = await axiosInstance.get(`${API_BASE_URL}/users`);
       const users = response.data || [];
 
       // Group users by period
@@ -262,12 +313,12 @@ class AdminStatisticsService {
   async getTopStores(limit: number = 10): Promise<TopStore[]> {
     try {
       const [ordersRes, storesRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/orders`),
-        axios.get(`${API_BASE_URL}/stores`),
+        axiosInstance.get(`${API_BASE_URL}/orders`),
+        axiosInstance.get(`${API_BASE_URL}/stores`),
       ]);
 
-      const orders = ordersRes.data || [];
-      const stores = storesRes.data || [];
+      const orders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+      const stores = Array.isArray(storesRes.data) ? storesRes.data : [];
 
       // Group orders by store and calculate stats
       const storeStats = new Map<number, any>();
@@ -322,14 +373,14 @@ class AdminStatisticsService {
   async getTopProducts(limit: number = 10): Promise<TopProduct[]> {
     try {
       const [ordersRes, productsRes, storesRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/orders`),
-        axios.get(`${API_BASE_URL}/products`),
-        axios.get(`${API_BASE_URL}/stores`),
+        axiosInstance.get(`${API_BASE_URL}/orders`),
+        axiosInstance.get(`${API_BASE_URL}/products`),
+        axiosInstance.get(`${API_BASE_URL}/stores`),
       ]);
 
-      const orders = ordersRes.data || [];
-      const products = productsRes.data || [];
-      const stores = storesRes.data || [];
+      const orders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+      const products = Array.isArray(productsRes.data) ? productsRes.data : [];
+      const stores = Array.isArray(storesRes.data) ? storesRes.data : [];
 
       // Group order items by product
       const productStats = new Map<number, any>();
@@ -413,6 +464,12 @@ class AdminStatisticsService {
     orders: any[],
     period: "daily" | "weekly" | "monthly"
   ): RevenueDataPoint[] {
+    // Guard against non-array input
+    if (!Array.isArray(orders)) {
+      console.warn("[AdminStatisticsService] orders is not an array:", orders);
+      return [];
+    }
+
     const grouped = new Map<string, RevenueDataPoint>();
 
     orders.forEach((order: any) => {

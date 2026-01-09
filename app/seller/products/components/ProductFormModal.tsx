@@ -166,12 +166,16 @@ export default function ProductFormModal({
       newErrors.description = "Description must be at least 20 characters";
     }
 
-    if (formData.price <= 0) {
-      newErrors.price = "Price must be greater than 0";
+    if (!formData.originalPrice || formData.originalPrice <= 0) {
+      newErrors.originalPrice = "Giá gốc là bắt buộc và phải lớn hơn 0";
     }
 
-    if (formData.originalPrice && formData.originalPrice <= formData.price) {
-      newErrors.originalPrice = "Giá giảm phải nhỏ hơn giá gốc";
+    if (
+      formData.price > 0 &&
+      formData.originalPrice &&
+      formData.price >= formData.originalPrice
+    ) {
+      newErrors.price = "Giá giảm phải nhỏ hơn giá gốc";
     }
 
     if (!formData.categoryId) {
@@ -395,44 +399,10 @@ export default function ProductFormModal({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label
-                      htmlFor="price"
-                      className="text-sm font-medium text-gray-700 mb-2 block"
-                    >
-                      Giá Gốc (VND) *
-                    </Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          price: Number(e.target.value),
-                        }))
-                      }
-                      placeholder="0"
-                      className={errors.price ? "border-red-500" : ""}
-                      disabled={isLoading}
-                      min="0"
-                    />
-                    {formData.price > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {formatPrice(formData.price)} VND
-                      </p>
-                    )}
-                    {errors.price && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.price}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label
                       htmlFor="originalPrice"
                       className="text-sm font-medium text-gray-700 mb-2 block"
                     >
-                      Giá Giảm (VND)
+                      Giá Gốc (VND) *
                     </Label>
                     <Input
                       id="originalPrice"
@@ -446,12 +416,12 @@ export default function ProductFormModal({
                             : undefined,
                         }))
                       }
-                      placeholder="Không bắt buộc"
+                      placeholder="0"
                       className={errors.originalPrice ? "border-red-500" : ""}
                       disabled={isLoading}
                       min="0"
                     />
-                    {formData.originalPrice && (
+                    {formData.originalPrice && formData.originalPrice > 0 && (
                       <p className="text-xs text-gray-500 mt-1">
                         {formatPrice(formData.originalPrice)} VND
                       </p>
@@ -459,6 +429,40 @@ export default function ProductFormModal({
                     {errors.originalPrice && (
                       <p className="text-red-500 text-sm mt-1">
                         {errors.originalPrice}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="price"
+                      className="text-sm font-medium text-gray-700 mb-2 block"
+                    >
+                      Giá Giảm (VND)
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          price: Number(e.target.value),
+                        }))
+                      }
+                      placeholder="Không bắt buộc"
+                      className={errors.price ? "border-red-500" : ""}
+                      disabled={isLoading}
+                      min="0"
+                    />
+                    {formData.price > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formatPrice(formData.price)} VND
+                      </p>
+                    )}
+                    {errors.price && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.price}
                       </p>
                     )}
                   </div>
@@ -614,8 +618,7 @@ export default function ProductFormModal({
                                 ...prev,
                                 status: e.target.value as
                                   | "AVAILABLE"
-                                  | "UNAVAILABLE"
-                                  | "out_of_stock",
+                                  | "UNAVAILABLE",
                               }))
                             }
                             className="mt-1"

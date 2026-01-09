@@ -160,7 +160,7 @@ export function ChatWindow({ userRole }: ChatWindowProps) {
         content: newMessage.content,
         message_type: MessageType.TEXT,
         is_read: newMessage.isRead || false,
-        read_at: null,
+        read_at: undefined,
         created_at: newMessage.createdAt,
       };
 

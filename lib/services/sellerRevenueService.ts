@@ -4,6 +4,13 @@ const API_BASE_URL = `${
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 }/api`;
 
+// Create axios instance with ngrok bypass header
+const axiosInstance = axios.create({
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
+});
+
 export interface SalesDataPoint {
   label: string; // Changed from 'date' to 'label' to match backend
   revenue: number;
@@ -61,7 +68,7 @@ class SellerRevenueService {
       console.log("[getSalesStats] Calling API:", url, "with period:", period);
       console.log("[getSalesStats] API_BASE_URL:", API_BASE_URL);
 
-      const response = await axios.get<SalesStats>(url, {
+      const response = await axiosInstance.get<SalesStats>(url, {
         params: { period },
       });
       return response.data;
@@ -101,7 +108,7 @@ class SellerRevenueService {
         endDate
       );
 
-      const response = await axios.get<SalesStats>(url, {
+      const response = await axiosInstance.get<SalesStats>(url, {
         params: { startDate, endDate },
       });
       return response.data;
@@ -130,7 +137,7 @@ class SellerRevenueService {
     limit: number = 5
   ): Promise<TopProduct[]> {
     try {
-      const response = await axios.get<TopProduct[]>(
+      const response = await axiosInstance.get<TopProduct[]>(
         `${API_BASE_URL}/orders/store/${storeId}/top-products`,
         {
           params: { limit },
@@ -185,6 +192,19 @@ class SellerRevenueService {
    * Convert sales data points to chart data
    */
   convertToChartData(salesStats: SalesStats): ChartData[] {
+    // Guard against undefined or null points array
+    if (
+      !salesStats ||
+      !salesStats.points ||
+      !Array.isArray(salesStats.points)
+    ) {
+      console.warn(
+        "[SellerRevenueService] salesStats.points is undefined or not an array:",
+        salesStats
+      );
+      return [];
+    }
+
     return salesStats.points.map((point) => ({
       date: point.label, // Map 'label' from backend to 'date' for charts
       revenue: point.revenue,

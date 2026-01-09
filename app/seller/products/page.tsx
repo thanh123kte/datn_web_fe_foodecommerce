@@ -13,9 +13,7 @@ import {
   Grid,
   List,
   Package,
-  ShoppingCart,
   TrendingUp,
-  Star,
   Image,
   Trash2,
 } from "lucide-react";
@@ -23,9 +21,6 @@ import {
   ProductFilters,
   Product as UiProduct,
   ProductFormData,
-  createProductAPI,
-  updateProductAPI,
-  deleteProductAPI,
 } from "@/lib/mockData/products";
 import ProductFormModal from "./components/ProductFormModal";
 import ProductFilterPanel from "./components/ProductFilterPanel";
@@ -106,25 +101,13 @@ export default function ProductsPage() {
           id: String(p.id),
           name: p.name,
           description: p.description || "",
-          price: p.discountPrice
-            ? Number(p.discountPrice)
-            : Number(p.price ?? 0),
-          originalPrice: p.discountPrice ? Number(p.price) : undefined,
+          price: p.discountPrice ? Number(p.discountPrice) : 0, // Giá giảm
+          originalPrice: Number(p.price), // Giá gốc (luôn có)
           categoryId: String(p.storeCategoryId ?? p.categoryId ?? ""),
           categoryName:
             p.storeCategoryName || p.categoryName || "Chưa phân loại",
           images: imageUrl ? [imageUrl] : [],
-          status:
-            p.status === "UNAVAILABLE"
-              ? "UNAVAILABLE"
-              : p.status === "OUT_OF_STOCK"
-              ? "out_of_stock"
-              : "AVAILABLE",
-          inventory: 0,
-          sold: 0,
-          rating: 0,
-          reviewCount: 0,
-          tags: [],
+          status: p.status === "UNAVAILABLE" ? "UNAVAILABLE" : "AVAILABLE",
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
         })
@@ -184,8 +167,8 @@ export default function ProductsPage() {
         storeCategoryId: Number(data.categoryId),
         name: data.name,
         description: data.description,
-        price: data.price,
-        discountPrice: data.originalPrice || undefined,
+        price: data.originalPrice!, // Giá gốc (bắt buộc)
+        discountPrice: data.price > 0 ? data.price : undefined, // Giá giảm (optional)
         status:
           data.status === "AVAILABLE"
             ? ProductStatus.AVAILABLE
@@ -219,8 +202,8 @@ export default function ProductsPage() {
         storeCategoryId: Number(data.categoryId),
         name: data.name,
         description: data.description,
-        price: data.price,
-        discountPrice: data.originalPrice || undefined,
+        price: data.originalPrice!, // Giá gốc (bắt buộc)
+        discountPrice: data.price > 0 ? data.price : undefined, // Giá giảm (optional)
         status:
           data.status === "AVAILABLE"
             ? ProductStatus.AVAILABLE
@@ -316,8 +299,6 @@ export default function ProductsPage() {
     total: products.length,
     active: products.filter((p) => p.status === "AVAILABLE").length,
     inactive: products.filter((p) => p.status === "UNAVAILABLE").length,
-    outOfStock: products.filter((p) => p.status === "out_of_stock").length,
-    totalSold: products.reduce((sum, p) => sum + p.sold, 0),
   };
 
   return (
@@ -343,7 +324,7 @@ export default function ProductsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -370,28 +351,11 @@ export default function ProductsPage() {
                   {stats.active}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {stats.inactive} ngừng hoạt động, {stats.outOfStock} hết hàng
+                  {stats.inactive} ngừng hoạt động
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <Image className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Tổng Bán Hàng
-                </p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {stats.totalSold}
-                </p>
-                <p className="text-xs text-gray-500">Sản phẩm đã bán</p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-orange-600" />
               </div>
             </div>
           </Card>
@@ -494,11 +458,6 @@ export default function ProductsPage() {
                 originalPrice={product.originalPrice}
                 image={product.images[0]}
                 status={product.status}
-                inventory={product.inventory}
-                sold={product.sold}
-                rating={product.rating}
-                reviewCount={product.reviewCount}
-                tags={product.tags}
                 categoryName={product.categoryName}
                 onManageImages={() => handleManageImages(product.id)}
                 onEdit={() => openEditModal(product)}
@@ -521,9 +480,6 @@ export default function ProductsPage() {
                     </th>
                     <th className="text-left py-4 px-6 font-medium text-gray-700">
                       Giá
-                    </th>
-                    <th className="text-left py-4 px-6 font-medium text-gray-700">
-                      Đã Bán
                     </th>
                     <th className="text-left py-4 px-6 font-medium text-gray-700">
                       Trạng Thái
@@ -581,25 +537,30 @@ export default function ProductsPage() {
                       </td>
                       <td className="py-4 px-6">
                         <div>
-                          <span className="font-medium text-gray-900">
-                            {new Intl.NumberFormat("vi-VN", {
-                              style: "currency",
-                              currency: "VND",
-                            }).format(product.price)}
-                          </span>
-                          {product.originalPrice &&
-                            product.originalPrice > product.price && (
+                          {product.price > 0 ? (
+                            <>
+                              <span className="font-medium text-red-600">
+                                {new Intl.NumberFormat("vi-VN", {
+                                  style: "currency",
+                                  currency: "VND",
+                                }).format(product.price)}
+                              </span>
                               <div className="text-sm text-gray-500 line-through">
                                 {new Intl.NumberFormat("vi-VN", {
                                   style: "currency",
                                   currency: "VND",
-                                }).format(product.originalPrice)}
+                                }).format(product.originalPrice!)}
                               </div>
-                            )}
+                            </>
+                          ) : (
+                            <span className="font-medium text-gray-900">
+                              {new Intl.NumberFormat("vi-VN", {
+                                style: "currency",
+                                currency: "VND",
+                              }).format(product.originalPrice!)}
+                            </span>
+                          )}
                         </div>
-                      </td>
-                      <td className="py-4 px-6 text-gray-900 font-medium">
-                        {product.sold}
                       </td>
                       <td className="py-4 px-6">
                         <Badge

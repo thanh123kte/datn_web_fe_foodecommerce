@@ -16,6 +16,9 @@ export const TopProducts: React.FC<TopProductsProps> = ({
   products,
   loading = false,
 }) => {
+  // Guard against undefined or non-array products
+  const safeProducts = Array.isArray(products) ? products : [];
+
   if (loading) {
     return (
       <Card className="p-6">
@@ -42,7 +45,7 @@ export const TopProducts: React.FC<TopProductsProps> = ({
     );
   }
 
-  if (products.length === 0) {
+  if (safeProducts.length === 0) {
     return (
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-6">
@@ -62,8 +65,8 @@ export const TopProducts: React.FC<TopProductsProps> = ({
   }
 
   // Find max values for progress bars
-  const maxSold = Math.max(...products.map((p) => p.totalSold));
-  const maxRevenue = Math.max(...products.map((p) => p.totalRevenue));
+  const maxSold = Math.max(...safeProducts.map((p) => p.totalSold));
+  const maxRevenue = Math.max(...safeProducts.map((p) => p.totalRevenue));
 
   return (
     <Card className="p-6">
@@ -73,12 +76,12 @@ export const TopProducts: React.FC<TopProductsProps> = ({
         </h3>
         <Badge variant="outline" className="text-sm">
           <TrendingUp className="h-4 w-4 mr-2" />
-          Top {products.length}
+          Top {safeProducts.length}
         </Badge>
       </div>
 
       <div className="space-y-4">
-        {products.map((product, index) => {
+        {safeProducts.map((product, index) => {
           const soldPercentage = (product.totalSold / maxSold) * 100;
           const revenuePercentage = (product.totalRevenue / maxRevenue) * 100;
 

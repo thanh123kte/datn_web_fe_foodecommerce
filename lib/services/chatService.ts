@@ -3,6 +3,14 @@ import { Conversation, Message, MessageType } from "@/types/chat";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+// Create axios instance with ngrok headers
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
+});
+
 interface UserResponseDto {
   id: string;
   fullName: string;
@@ -77,8 +85,8 @@ export const chatService = {
     sellerId: string
   ): Promise<Conversation> => {
     try {
-      const response = await axios.post<ConversationResponseDto>(
-        `${API_BASE_URL}/api/chat/conversations`,
+      const response = await axiosInstance.post<ConversationResponseDto>(
+        `/api/chat/conversations`,
         { customerId, sellerId }
       );
       return convertToConversation(response.data);
@@ -93,16 +101,26 @@ export const chatService = {
     sellerId: string
   ): Promise<Conversation[]> => {
     try {
-      const url = `${API_BASE_URL}/api/conversations/seller/${sellerId}`;
+      const url = `/api/conversations/seller/${sellerId}`;
       console.log("[ChatService] Fetching seller conversations from:", url);
-      const response = await axios.get<ConversationResponseDto[]>(url);
+      const response = await axiosInstance.get<ConversationResponseDto[]>(url);
       console.log("[ChatService] API response:", response.data);
+
+      // Check if response.data is an array
+      if (!Array.isArray(response.data)) {
+        console.error(
+          "[ChatService] Response data is not an array:",
+          response.data
+        );
+        return [];
+      }
+
       const conversations = response.data.map(convertToConversation);
       console.log("[ChatService] Converted conversations:", conversations);
       return conversations;
     } catch (error) {
       console.error("Error fetching seller conversations:", error);
-      throw error;
+      return [];
     }
   },
 
@@ -117,8 +135,8 @@ export const chatService = {
   // Get conversation by ID
   getConversation: async (conversationId: number): Promise<Conversation> => {
     try {
-      const response = await axios.get<ConversationResponseDto>(
-        `${API_BASE_URL}/api/chat/conversations/${conversationId}`
+      const response = await axiosInstance.get<ConversationResponseDto>(
+        `/api/chat/conversations/${conversationId}`
       );
       return convertToConversation(response.data);
     } catch (error) {
@@ -130,13 +148,23 @@ export const chatService = {
   // Get messages in a conversation
   getMessages: async (conversationId: number): Promise<Message[]> => {
     try {
-      const response = await axios.get<MessageResponseDto[]>(
-        `${API_BASE_URL}/api/chat/conversations/${conversationId}/messages`
+      const response = await axiosInstance.get<MessageResponseDto[]>(
+        `/api/chat/conversations/${conversationId}/messages`
       );
+
+      // Check if response.data is an array
+      if (!Array.isArray(response.data)) {
+        console.error(
+          "[ChatService] Messages response data is not an array:",
+          response.data
+        );
+        return [];
+      }
+
       return response.data.map(convertToMessage);
     } catch (error) {
       console.error("Error fetching messages:", error);
-      throw error;
+      return [];
     }
   },
 
@@ -148,8 +176,8 @@ export const chatService = {
     messageType: MessageType = MessageType.TEXT
   ): Promise<Message> => {
     try {
-      const response = await axios.post<MessageResponseDto>(
-        `${API_BASE_URL}/api/chat/messages?senderId=${senderId}`,
+      const response = await axiosInstance.post<MessageResponseDto>(
+        `/api/chat/messages?senderId=${senderId}`,
         {
           conversationId,
           content,
@@ -166,8 +194,8 @@ export const chatService = {
   // Mark messages as read
   markAsRead: async (conversationId: number, userId: string): Promise<void> => {
     try {
-      await axios.put(
-        `${API_BASE_URL}/api/chat/conversations/${conversationId}/read`,
+      await axiosInstance.put(
+        `/api/chat/conversations/${conversationId}/read`,
         null,
         { params: { userId } }
       );
@@ -183,8 +211,8 @@ export const chatService = {
     userId: string
   ): Promise<void> => {
     try {
-      await axios.post(
-        `${API_BASE_URL}/api/conversations/${conversationId}/mark-read?userId=${userId}`
+      await axiosInstance.post(
+        `/api/conversations/${conversationId}/mark-read?userId=${userId}`
       );
     } catch (error) {
       console.error("Error marking conversation as read:", error);

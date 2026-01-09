@@ -4,7 +4,7 @@ import { API_BASE_URL } from "@/lib/config/env";
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Tăng timeout lên 30s cho ngrok
   headers: {
     "Content-Type": "application/json",
     "ngrok-skip-browser-warning": "true",

@@ -64,7 +64,7 @@ export function VoucherTable({
     if (voucher.discount_type === DiscountType.PERCENT) {
       return `${voucher.discount_value}%`;
     }
-    return `$${voucher.discount_value.toLocaleString()}`;
+    return `${voucher.discount_value.toLocaleString()}đ`;
   };
 
   const formatDate = (dateString: string) => {
@@ -215,11 +215,11 @@ export function VoucherTable({
                       {voucher.title}
                     </div>
                     <div className="text-sm text-gray-600">
-                      Min order: ${voucher.min_order_value.toLocaleString()}
+                      Min order: {voucher.min_order_value.toLocaleString()}đ
                     </div>
                     {voucher.max_discount > 0 && (
                       <div className="text-sm text-gray-600">
-                        Max discount: ${voucher.max_discount.toLocaleString()}
+                        Max discount: {voucher.max_discount.toLocaleString()}đ
                       </div>
                     )}
                   </div>
