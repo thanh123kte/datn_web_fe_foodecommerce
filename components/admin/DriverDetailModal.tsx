@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { resolveAvatarUrl } from "@/lib/utils/imageUtils";
+import { resolveAvatarUrl, resolveMediaUrl } from "@/lib/utils/imageUtils";
 
 interface DriverDetailModalProps {
   driver: Driver | null;
@@ -31,6 +31,20 @@ export function DriverDetailModal({
   documents = [],
 }: DriverDetailModalProps) {
   const [rejectionReason, setRejectionReason] = useState("");
+
+  // Debug: Log driver data
+  useEffect(() => {
+    if (driver) {
+      console.log("Driver data:", driver);
+      console.log("Image URLs:", {
+        cccd_front: driver.cccd_front_image_url,
+        cccd_back: driver.cccd_back_image_url,
+        license: driver.license_image_url,
+        vehicle_plate: driver.vehicle_plate_image_url,
+        vehicle_registration: driver.vehicle_registration_image_url,
+      });
+    }
+  }, [driver]);
 
   if (!isOpen || !driver) return null;
 
@@ -58,7 +72,7 @@ export function DriverDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 backdrop-blur-[2px] bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
@@ -185,6 +199,136 @@ export function DriverDetailModal({
             </div>
           </div>
 
+          {/* Driver Document Images */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Hình ảnh giấy tờ</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* CCCD Front */}
+            {driver.cccd_front_image_url && (
+              <Card className="p-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">CCCD - Mặt trước</span>
+                  </div>
+                  <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                    <img
+                      src={resolveMediaUrl(driver.cccd_front_image_url)}
+                      alt="CCCD mặt trước"
+                      className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                      onClick={() =>
+                        window.open(
+                          resolveMediaUrl(driver.cccd_front_image_url),
+                          "_blank"
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              </Card>
+            )}
+
+              {/* CCCD Back */}
+              {driver.cccd_back_image_url && (
+                <Card className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">CCCD - Mặt sau</span>
+                    </div>
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={resolveMediaUrl(driver.cccd_back_image_url)}
+                        alt="CCCD mặt sau"
+                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() =>
+                          window.open(
+                            resolveMediaUrl(driver.cccd_back_image_url),
+                            "_blank"
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* License */}
+              {driver.license_image_url && (
+                <Card className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Bằng lái xe</span>
+                    </div>
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={resolveMediaUrl(driver.license_image_url)}
+                        alt="Bằng lái xe"
+                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() =>
+                          window.open(
+                            resolveMediaUrl(driver.license_image_url),
+                            "_blank"
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Vehicle Plate */}
+              {driver.vehicle_plate_image_url && (
+                <Card className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Biển số xe</span>
+                    </div>
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={resolveMediaUrl(driver.vehicle_plate_image_url)}
+                        alt="Biển số xe"
+                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() =>
+                          window.open(
+                            resolveMediaUrl(driver.vehicle_plate_image_url),
+                            "_blank"
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Vehicle Registration */}
+              {driver.vehicle_registration_image_url && (
+                <Card className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Đăng ký xe</span>
+                    </div>
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={resolveMediaUrl(
+                          driver.vehicle_registration_image_url
+                        )}
+                        alt="Đăng ký xe"
+                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() =>
+                          window.open(
+                            resolveMediaUrl(
+                              driver.vehicle_registration_image_url
+                            ),
+                            "_blank"
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </div>
+          </div>
+
           {/* Verification Status */}
           <div>
             <h3 className="text-lg font-semibold mb-4">Trạng thái xác minh</h3>
@@ -211,9 +355,7 @@ export function DriverDetailModal({
                         : "bg-gray-100 text-gray-800"
                     }
                   >
-                    {driver.verified
-                      ? "Đang hoạt động"
-                      : "Không hoạt động"}
+                    {driver.verified ? "Đang hoạt động" : "Không hoạt động"}
                   </Badge>
                 </div>
               </div>

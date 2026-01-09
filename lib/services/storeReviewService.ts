@@ -226,6 +226,29 @@ const storeReviewService = {
       throw error;
     }
   },
+
+  // Get all reviews (for admin)
+  async getAllReviews(): Promise<StoreReview[]> {
+    try {
+      const response = await axiosInstance.get<StoreReview[]>(
+        `/api/store-reviews`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching all reviews:", error);
+      throw error;
+    }
+  },
+
+  // Delete a review (for admin)
+  async deleteReview(reviewId: number): Promise<void> {
+    try {
+      await axiosInstance.delete(`/api/store-reviews/${reviewId}`);
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      throw error;
+    }
+  },
 };
 
 export default storeReviewService;

@@ -54,28 +54,44 @@ export default function SellersPage() {
       try {
         setIsLoading(true);
 
-        // Fetch all sellers with stats (products, orders, revenue)
+        // Fetch pending stores using the new API endpoint
+        const pendingStores = await storeService.getByStatus("PENDING");
+
+        // Fetch user information for each pending store
+        const pendingWithUsers = await Promise.all(
+          pendingStores.map(async (store) => {
+            try {
+              const user = await userService.getById(store.ownerId);
+              return {
+                ...user,
+                store,
+              } as PendingSeller;
+            } catch (error) {
+              console.error(`Failed to fetch user ${store.ownerId}:`, error);
+              return null;
+            }
+          })
+        );
+
+        // Filter out any null values
+        const validPendingSellers = pendingWithUsers.filter(
+          (seller): seller is PendingSeller => seller !== null
+        );
+
+        setPendingSellers(validPendingSellers);
+
+        // Fetch all sellers with stats (products, orders, revenue) for the table
         const sellersWithStats = await userService.getSellersWithStats();
 
-        // Separate active sellers and pending sellers based on store status
-        const activeSellers: Seller[] = [];
-        const pending: PendingSeller[] = [];
-
-        sellersWithStats.forEach((seller) => {
-          // If store status is PENDING, add to pending sellers
-          if (seller.store && seller.store.status === "PENDING") {
-            pending.push(seller);
-          } else if (seller.store) {
-            // Otherwise, add to active sellers
-            activeSellers.push({
-              ...seller,
-              revenue: seller.totalRevenue,
-            });
-          }
-        });
+        // Keep only sellers that are not PENDING
+        const activeSellers: Seller[] = sellersWithStats
+          .filter((seller) => seller.store && seller.store.status !== "PENDING")
+          .map((seller) => ({
+            ...seller,
+            revenue: seller.totalRevenue,
+          }));
 
         setSellers(activeSellers);
-        setPendingSellers(pending);
       } catch (error) {
         console.error("Failed to fetch sellers:", error);
       } finally {
@@ -111,6 +127,53 @@ export default function SellersPage() {
     }).format(amount);
   };
 
+  // Reusable function to refresh data
+  const refreshData = async () => {
+    try {
+      // Fetch pending stores using the new API endpoint
+      const pendingStores = await storeService.getByStatus("PENDING");
+
+      // Fetch user information for each pending store
+      const pendingWithUsers = await Promise.all(
+        pendingStores.map(async (store) => {
+          try {
+            const user = await userService.getById(store.ownerId);
+            return {
+              ...user,
+              store,
+            } as PendingSeller;
+          } catch (error) {
+            console.error(`Failed to fetch user ${store.ownerId}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // Filter out any null values
+      const validPendingSellers = pendingWithUsers.filter(
+        (seller): seller is PendingSeller => seller !== null
+      );
+
+      setPendingSellers(validPendingSellers);
+
+      // Fetch all sellers with stats (products, orders, revenue) for the table
+      const sellersWithStats = await userService.getSellersWithStats();
+
+      // Keep only sellers that are not PENDING
+      const activeSellers: Seller[] = sellersWithStats
+        .filter((seller) => seller.store && seller.store.status !== "PENDING")
+        .map((seller) => ({
+          ...seller,
+          revenue: seller.totalRevenue,
+        }));
+
+      setSellers(activeSellers);
+    } catch (error) {
+      console.error("Failed to refresh data:", error);
+      throw error;
+    }
+  };
+
   const handleApprove = async (pendingSeller: PendingSeller) => {
     if (window.confirm("Bạn có chắc chắn muốn duyệt yêu cầu này?")) {
       try {
@@ -118,24 +181,11 @@ export default function SellersPage() {
           // Update store status to ACTIVE
           await storeService.setStatus(pendingSeller.store.id, "ACTIVE");
 
+          // Add SELLER role to user
+          await userService.addRole(pendingSeller.id, "SELLER");
+
           // Refresh data
-          const sellersWithStats = await userService.getSellersWithStats();
-          const activeSellers: Seller[] = [];
-          const pending: PendingSeller[] = [];
-
-          sellersWithStats.forEach((seller) => {
-            if (seller.store && seller.store.status === "PENDING") {
-              pending.push(seller);
-            } else if (seller.store) {
-              activeSellers.push({
-                ...seller,
-                revenue: seller.totalRevenue,
-              });
-            }
-          });
-
-          setSellers(activeSellers);
-          setPendingSellers(pending);
+          await refreshData();
         }
       } catch (error) {
         console.error("Failed to approve seller:", error);
@@ -152,23 +202,7 @@ export default function SellersPage() {
           await storeService.setStatus(pendingSeller.store.id, "SUSPENDED");
 
           // Refresh data
-          const sellersWithStats = await userService.getSellersWithStats();
-          const activeSellers: Seller[] = [];
-          const pending: PendingSeller[] = [];
-
-          sellersWithStats.forEach((seller) => {
-            if (seller.store && seller.store.status === "PENDING") {
-              pending.push(seller);
-            } else if (seller.store) {
-              activeSellers.push({
-                ...seller,
-                revenue: seller.totalRevenue,
-              });
-            }
-          });
-
-          setSellers(activeSellers);
-          setPendingSellers(pending);
+          await refreshData();
         }
       } catch (error) {
         console.error("Failed to reject seller:", error);
@@ -183,12 +217,7 @@ export default function SellersPage() {
         if (seller.store) {
           await storeService.setStatus(seller.store.id, "INACTIVE");
           // Refresh sellers list
-          const sellersWithStats = await userService.getSellersWithStats();
-          const activeSellers: Seller[] = sellersWithStats
-            .filter((s) => s.store && s.store.status !== "PENDING")
-            .map((s) => ({ ...s, revenue: s.totalRevenue }));
-
-          setSellers(activeSellers);
+          await refreshData();
         }
       } catch (error) {
         console.error("Failed to deactivate store:", error);
@@ -203,12 +232,7 @@ export default function SellersPage() {
         if (seller.store) {
           await storeService.setStatus(seller.store.id, "ACTIVE");
           // Refresh sellers list
-          const sellersWithStats = await userService.getSellersWithStats();
-          const activeSellers: Seller[] = sellersWithStats
-            .filter((s) => s.store && s.store.status !== "PENDING")
-            .map((s) => ({ ...s, revenue: s.totalRevenue }));
-
-          setSellers(activeSellers);
+          await refreshData();
         }
       } catch (error) {
         console.error("Failed to activate store:", error);
@@ -438,28 +462,28 @@ export default function SellersPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Seller / Store
+                    Cửa hàng
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contact
+                    THông tin
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Products
+                    Sản phẩm
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Orders
+                    Đơn hàng
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Revenue
+                    Doanh thu
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Trạng thái
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Joined
+                    Tham gia
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    Thao tác
                   </th>
                 </tr>
               </thead>

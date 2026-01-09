@@ -165,10 +165,10 @@ export default function DriversPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Driver Management
+            Quản lý tài xế
           </h1>
           <p className="text-gray-600 mt-1">
-            Manage drivers, verifications, and deliveries
+            Quản lý tài xế, xác minh và giao hàng
           </p>
         </div>
       </div>

@@ -149,7 +149,7 @@ export const profileService = {
     ]);
 
     const user = mapUser(userRes.data);
-    const storeDto = (storesRes ?? [])[0];
+    const storeDto = storesRes; // storeService.getByOwner returns Store | null, not array
     const store = storeDto
       ? mapStore(storeDto as unknown as BackendStore, userId)
       : emptyStore(userId);

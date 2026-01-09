@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, RefreshCw } from "lucide-react";
-import { BannerTable, BannerDetailModal } from "@/components/admin/promotion";
+import {
+  BannerTable,
+  BannerDetailModal,
+  BannerStatsCards,
+} from "@/components/admin/promotion";
 import {
   Banner,
   BannerFilters,
@@ -182,32 +186,7 @@ export default function BannersPage() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600">Tổng Banner</div>
-          <div className="text-2xl font-bold text-gray-900 mt-1">
-            {stats.totalBanners}
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600">Banner Hoạt Động</div>
-          <div className="text-2xl font-bold text-green-600 mt-1">
-            {stats.activeBanners}
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600">Banner Tạm Dừng</div>
-          <div className="text-2xl font-bold text-orange-600 mt-1">
-            {stats.inactiveBanners}
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600">Banner Hết Hạn</div>
-          <div className="text-2xl font-bold text-red-600 mt-1">
-            {stats.expiredBanners}
-          </div>
-        </div>
-      </div>
+      <BannerStatsCards stats={stats} />
 
       {/* Banners Table */}
       <div>

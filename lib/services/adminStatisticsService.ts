@@ -118,9 +118,7 @@ class AdminStatisticsService {
       // Calculate commission (assume 10% platform fee)
       const totalCommission = totalRevenue * 0.1;
 
-      const activeStores = stores.filter(
-        (store: any) => store.isActive
-      ).length;
+      const activeStores = stores.filter((store: any) => store.isActive).length;
 
       return {
         totalRevenue,

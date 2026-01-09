@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   VoucherTable,
   VoucherDetailModal,
-  PromotionStatsComponent,
+  VoucherStatsCards,
 } from "@/components/admin/promotion";
 import {
   Voucher,
@@ -227,24 +227,7 @@ export default function VouchersPage() {
         </Link>
       </div>
       {/* Quick Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-lg text-white">
-          <div className="text-2xl font-bold">{stats.active_vouchers}</div>
-          <div className="text-blue-100">Voucher Hoạt Động</div>
-        </div>
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 rounded-lg text-white">
-          <div className="text-2xl font-bold">{stats.total_voucher_usage}</div>
-          <div className="text-green-100">Tổng Lượt Dùng</div>
-        </div>
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-4 rounded-lg text-white">
-          <div className="text-2xl font-bold">{stats.admin_vouchers}</div>
-          <div className="text-purple-100">Admin Tạo</div>
-        </div>
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4 rounded-lg text-white">
-          <div className="text-2xl font-bold">{stats.seller_vouchers}</div>
-          <div className="text-orange-100">Người Bán Tạo</div>
-        </div>
-      </div>
+      <VoucherStatsCards stats={stats} />
 
       {/* Tabs */}
       <div className="border-b border-gray-200">

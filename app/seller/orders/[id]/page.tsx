@@ -627,35 +627,6 @@ export default function OrderDetailPage() {
                       </Button>
                     )}
 
-                    <Button
-                      onClick={handlePrintInvoice}
-                      variant="outline"
-                      className="border-gray-300 hover:bg-gray-50"
-                    >
-                      <Printer className="w-4 h-4 mr-2" />
-                      In hoá đơn
-                    </Button>
-
-                    <Button
-                      onClick={handleCallCustomer}
-                      variant="outline"
-                      className="border-blue-300 hover:bg-blue-50 text-blue-700"
-                    >
-                      <PhoneCall className="w-4 h-4 mr-2" />
-                      Gọi khách
-                    </Button>
-
-                    {order.driver && (
-                      <Button
-                        onClick={handleCallDriver}
-                        variant="outline"
-                        className="border-purple-300 hover:bg-purple-50 text-purple-700"
-                      >
-                        <PhoneCall className="w-4 h-4 mr-2" />
-                        Gọi tài xế
-                      </Button>
-                    )}
-
                     {order.orderStatus !== "DELIVERED" &&
                       order.orderStatus !== "CANCELLED" && (
                         <Button
@@ -704,15 +675,6 @@ export default function OrderDetailPage() {
                         </Button>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleCallCustomer}
-                      className="w-full h-8 text-xs border-blue-300 hover:bg-blue-50 text-blue-700"
-                    >
-                      <PhoneCall className="w-3.5 h-3.5 mr-1.5" />
-                      Gọi khách hàng
-                    </Button>
                   </div>
                 </div>
 
@@ -771,15 +733,6 @@ export default function OrderDetailPage() {
                           </div>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleCallDriver}
-                        className="w-full h-8 text-xs border-purple-300 hover:bg-purple-50 text-purple-700"
-                      >
-                        <PhoneCall className="w-3.5 h-3.5 mr-1.5" />
-                        Gọi tài xế
-                      </Button>
                     </div>
                   </div>
                 )}

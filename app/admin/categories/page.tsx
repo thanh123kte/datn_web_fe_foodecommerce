@@ -321,10 +321,10 @@ export default function AdminCategoriesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Category Management
+            Quản lí danh mục
           </h1>
           <p className="text-gray-600 mt-1">
-            Manage product categories for the platform
+            Quản lí các danh mục sản phẩm cho nền tảng hệ thống của bạn.
           </p>
         </div>
         <Button
@@ -333,7 +333,7 @@ export default function AdminCategoriesPage() {
             setShowEditModal(true);
           }}
         >
-          Add Category
+          Thêm danh mục mới
         </Button>
       </div>
 
@@ -341,7 +341,7 @@ export default function AdminCategoriesPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">
-            All Categories ({filteredCategories.length})
+            Tất cả danh mục ({filteredCategories.length})
           </h2>
         </div>
 

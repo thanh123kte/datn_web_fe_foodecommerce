@@ -13,8 +13,13 @@ export interface Driver {
   avatar_url?: string;
   vehicle_type: string;
   vehicle_plate: string;
+  vehicle_plate_image_url?: string;
+  vehicle_registration_image_url?: string;
   cccd_number: string;
+  cccd_front_image_url?: string;
+  cccd_back_image_url?: string;
   license_number: string;
+  license_image_url?: string;
   verified: boolean;
   verification_status: VerificationStatus;
   created_at: string;

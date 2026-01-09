@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/card";
 import { ReviewFilters } from "@/components/admin/ReviewFilters";
 import { AdminReviewList } from "./components/AdminReviewList";
+import storeReviewService from "@/lib/services/storeReviewService";
+import storeService from "@/lib/services/storeService";
 
 interface Store {
   id: number;
@@ -63,11 +65,8 @@ export default function AdminReviewsPage() {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:8080/api/store-reviews");
-      if (response.ok) {
-        const data = await response.json();
-        setReviews(data);
-      }
+      const data = await storeReviewService.getAllReviews();
+      setReviews(data);
     } catch (error) {
       console.error("Error fetching reviews:", error);
     } finally {
@@ -77,11 +76,8 @@ export default function AdminReviewsPage() {
 
   const fetchStores = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/stores");
-      if (response.ok) {
-        const data = await response.json();
-        setStores(data);
-      }
+      const data = await storeService.getAll();
+      setStores(data);
     } catch (error) {
       console.error("Error fetching stores:", error);
     }
@@ -91,15 +87,8 @@ export default function AdminReviewsPage() {
     if (!confirm("Bạn có chắc chắn muốn xóa đánh giá này?")) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/store-reviews/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
-      if (response.ok) {
-        setReviews(reviews.filter((r) => r.id !== id));
-      }
+      await storeReviewService.deleteReview(id);
+      setReviews(reviews.filter((r) => r.id !== id));
     } catch (error) {
       console.error("Error deleting review:", error);
       alert("Không thể xóa đánh giá");

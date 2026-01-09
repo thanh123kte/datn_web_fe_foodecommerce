@@ -221,27 +221,6 @@ export default function ProfilePage() {
     []
   );
 
-  const handleUpdateNotifications = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async (settings: {
-      email_notifications: boolean;
-      order_notifications: boolean;
-      promotion_notifications: boolean;
-      review_notifications: boolean;
-    }) => {
-      setLoading(true);
-      try {
-        // TODO: Update settings properly with correct structure
-        toast.info("Notification settings update not implemented yet");
-      } catch {
-        toast.error("Error updating settings");
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
   if (!profile) {
     return (
       <MainLayout userRole="seller" title="Store Profile">
@@ -307,7 +286,6 @@ export default function ProfilePage() {
           <TabsContent value="settings" className="space-y-6">
             <SettingsSection
               onChangePassword={handleChangePassword}
-              onUpdateNotifications={handleUpdateNotifications}
               loading={loading}
             />
           </TabsContent>

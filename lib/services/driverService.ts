@@ -29,8 +29,13 @@ export interface DriverResponse {
   avatarUrl?: string;
   vehicleType: string;
   vehiclePlate: string;
+  vehiclePlateImageUrl?: string;
+  vehicleRegistrationImageUrl?: string;
   cccdNumber: string;
+  cccdFrontImageUrl?: string;
+  cccdBackImageUrl?: string;
   licenseNumber: string;
+  licenseImageUrl?: string;
   verified: boolean;
   verificationStatus: VerificationStatus;
   createdAt: string;
@@ -49,8 +54,13 @@ class DriverService {
       avatar_url: response.avatarUrl,
       vehicle_type: response.vehicleType,
       vehicle_plate: response.vehiclePlate,
+      vehicle_plate_image_url: response.vehiclePlateImageUrl,
+      vehicle_registration_image_url: response.vehicleRegistrationImageUrl,
       cccd_number: response.cccdNumber,
+      cccd_front_image_url: response.cccdFrontImageUrl,
+      cccd_back_image_url: response.cccdBackImageUrl,
       license_number: response.licenseNumber,
+      license_image_url: response.licenseImageUrl,
       verified: response.verified,
       verification_status: response.verificationStatus,
       created_at: response.createdAt,

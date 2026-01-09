@@ -144,7 +144,7 @@ export default function AdminReportsPage() {
   }
 
   return (
-    <div >
+    <div>
       <div className="space-y-6 p-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
           Thống Kê Hệ Thống
@@ -352,7 +352,11 @@ export default function AdminReportsPage() {
             </div>
 
             {/* Refresh Button */}
-            <Button onClick={handleRefresh} disabled={refreshing} className="h-10">
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="h-10"
+            >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
               />
@@ -442,7 +446,8 @@ export default function AdminReportsPage() {
                       )}
                     </p>
                     <p className="text-xs text-gray-500">
-                      HH: {adminStatisticsService.formatCurrency(store.commission)}
+                      HH:{" "}
+                      {adminStatisticsService.formatCurrency(store.commission)}
                     </p>
                   </div>
                 </div>
@@ -481,7 +486,8 @@ export default function AdminReportsPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-gray-900">
-                      {adminStatisticsService.formatNumber(product.totalSold)} đã bán
+                      {adminStatisticsService.formatNumber(product.totalSold)}{" "}
+                      đã bán
                     </p>
                     <p className="text-xs text-gray-500">
                       {adminStatisticsService.formatCurrency(

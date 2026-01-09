@@ -133,6 +133,16 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Quản lý sản phẩm</h1>
+          <p className="text-gray-600 mt-1">
+            Quản lý tất cả sản phẩm trong hệ thống
+          </p>
+        </div>
+      </div>
+
       {/* Stats Section */}
       <ProductStatsComponent products={products} isLoading={isLoading} />
 

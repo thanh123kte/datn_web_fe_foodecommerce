@@ -195,16 +195,6 @@ export const ProductTable: React.FC<ProductTableProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Quản lý sản phẩm</h2>
-          <p className="text-gray-600">
-            Quản lý tất cả sản phẩm trong hệ thống
-          </p>
-        </div>
-      </div>
-
       {/* Filters */}
       <Card className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">

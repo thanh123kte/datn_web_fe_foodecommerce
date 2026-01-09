@@ -2,6 +2,7 @@
 
 import { DriverStats as DriverStatsType } from "@/types/driver";
 import { Card } from "@/components/ui/card";
+import { Users, UserCheck, Clock, Loader2 } from "lucide-react";
 
 interface DriverStatsProps {
   stats: DriverStatsType;
@@ -11,15 +12,8 @@ interface DriverStatsProps {
 export function DriverStats({ stats, loading = false }: DriverStatsProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {[...Array(8)].map((_, i) => (
-          <Card key={i} className="p-6">
-            <div className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </Card>
-        ))}
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     );
   }
@@ -34,116 +28,69 @@ export function DriverStats({ stats, loading = false }: DriverStatsProps) {
       ? Math.round((stats.pending_verification / stats.total_drivers) * 100)
       : 0;
 
-  const rejectionRate =
-    stats.total_drivers > 0
-      ? Math.round((stats.rejected_drivers / stats.total_drivers) * 100)
-      : 0;
-
-  const statItems = [
-    {
-      title: "Tổng tài xế",
-      value: stats.total_drivers.toLocaleString(),
-      icon: "👥",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-    },
-    {
-      title: "Tài xế đã xác minh",
-      value: stats.verified_drivers.toLocaleString(),
-      icon: "✅",
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-    },
-    {
-      title: "Chờ xác minh",
-      value: stats.pending_verification.toLocaleString(),
-      icon: "⏳",
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-    },
-    {
-      title: "Tài xế bị từ chối",
-      value: stats.rejected_drivers.toLocaleString(),
-      icon: "❌",
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-    },
-    {
-      title: "Tài xế hoạt động",
-      value: stats.active_drivers.toLocaleString(),
-      icon: "🟢",
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-    },
-    {
-      title: "Tài xế không hoạt động",
-      value: stats.inactive_drivers.toLocaleString(),
-      icon: "⭕",
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
-    },
-    {
-      title: "Tài xế mới tháng này",
-      value: stats.new_drivers_this_month.toLocaleString(),
-      icon: "🆕",
-      color: "text-pink-600",
-      bgColor: "bg-pink-50",
-    },
-  ];
-
   return (
-    <div className="space-y-6 mb-8">
+    <div className="mb-8">
       {/* Quick Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500 gap-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <Card className="p-6 gap-0">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-700">
-                Tổng tài xế
-              </h3>
-              <p className="text-3xl font-bold text-blue-600 mt-2">
+              <p className="text-sm font-medium text-gray-600">Tổng tài xế</p>
+              <p className="text-2xl font-bold text-gray-900">
                 {stats.total_drivers.toLocaleString()}
               </p>
-              <p className="text-sm text-gray-600 mt-1">
-                {verificationRate}% Đã xác minh (
-                {stats.verified_drivers.toLocaleString()})
-              </p>
             </div>
-            <div className="text-4xl">👥</div>
+            <div className="p-3 bg-blue-100 rounded-full">
+              <Users className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-sm">
+            <span className="text-green-600 font-medium">
+              {verificationRate}%
+            </span>
+            <span className="text-gray-600 ml-1">
+              Đã xác minh ({stats.verified_drivers.toLocaleString()})
+            </span>
           </div>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-l-green-500 gap-0">
+        <Card className="p-6 gap-0">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-700">
+              <p className="text-sm font-medium text-gray-600">
                 Tài xế hoạt động
-              </h3>
-              <p className="text-3xl font-bold text-green-600 mt-2">
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
                 {stats.active_drivers.toLocaleString()}
               </p>
-              <p className="text-sm text-gray-600 mt-1">
-                {stats.inactive_drivers.toLocaleString()} tài xế không hoạt động
-              </p>
             </div>
-            <div className="text-4xl">🟢</div>
+            <div className="p-3 bg-green-100 rounded-full">
+              <UserCheck className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-sm">
+            <span className="text-gray-600 font-medium">
+              {stats.inactive_drivers.toLocaleString()}
+            </span>
+            <span className="text-gray-600 ml-1">tài xế không hoạt động</span>
           </div>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-l-yellow-500 gap-0">
+        <Card className="p-6 gap-0">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-700">
-                Chờ xác minh
-              </h3>
-              <p className="text-3xl font-bold text-yellow-600 mt-2">
+              <p className="text-sm font-medium text-gray-600">Chờ xác minh</p>
+              <p className="text-2xl font-bold text-gray-900">
                 {stats.pending_verification.toLocaleString()}
               </p>
-              <p className="text-sm text-gray-600 mt-1">
-                {pendingRate}% tổng tài xế
-              </p>
             </div>
-            <div className="text-4xl">⏳</div>
+            <div className="p-3 bg-yellow-100 rounded-full">
+              <Clock className="w-6 h-6 text-yellow-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-sm">
+            <span className="text-yellow-600 font-medium">{pendingRate}%</span>
+            <span className="text-gray-600 ml-1">tổng tài xế</span>
           </div>
         </Card>
       </div>

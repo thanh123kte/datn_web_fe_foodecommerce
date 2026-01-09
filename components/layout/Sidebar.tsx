@@ -42,32 +42,32 @@ interface NavItem {
 
 const navigationItems: NavItem[] = [
   {
-    title: "Dashboard",
+    title: "Tổng quan",
     href: "/admin/dashboard",
     icon: LayoutDashboard,
     roles: ["admin"],
   },
   {
-    title: "Dashboard",
+    title: "Tổng quan",
     href: "/seller/dashboard",
     icon: LayoutDashboard,
     roles: ["seller"],
   },
   // Admin specific items
   {
-    title: "Users",
+    title: "Người dùng",
     href: "/admin/users/customers",
     icon: Users,
     roles: ["admin"],
     children: [
       {
-        title: "Customers",
+        title: "Khách hàng",
         href: "/admin/users/customers",
         icon: Users,
         roles: ["admin"],
       },
       {
-        title: "Sellers",
+        title: "Cửa hàng",
         href: "/admin/users/sellers",
         icon: Store,
         roles: ["admin"],
@@ -75,55 +75,55 @@ const navigationItems: NavItem[] = [
     ],
   },
   {
-    title: "Drivers",
+    title: "Tài xế",
     href: "/admin/drivers",
     icon: Truck,
     roles: ["admin"],
   },
   {
-    title: "Categories",
+    title: "Danh mục",
     href: "/admin/categories",
     icon: Tag,
     roles: ["admin"],
   },
   {
-    title: "Products",
+    title: "Sản phẩm",
     href: "/admin/products",
     icon: Package,
     roles: ["admin"],
   },
   {
-    title: "Reports",
+    title: "Thống kê",
     href: "/admin/reports",
     icon: FileBarChart,
     roles: ["admin"],
   },
   {
-    title: "Reviews",
+    title: "Đánh giá",
     href: "/admin/reviews",
     icon: Star,
     roles: ["admin"],
   },
   {
-    title: "Wallet",
+    title: "Ví tiền",
     href: "/admin/wallet",
     icon: Wallet,
     roles: ["admin"],
   },
   {
-    title: "Promotions",
+    title: "Khuyến mãi",
     href: "/admin/promotions/banners",
     icon: Gift,
     roles: ["admin"],
     children: [
       {
-        title: "Banners",
+        title: "Banner",
         href: "/admin/promotions/banners",
         icon: Megaphone,
         roles: ["admin"],
       },
       {
-        title: "Vouchers",
+        title: "Voucher",
         href: "/admin/promotions/vouchers",
         icon: TicketPercent,
         roles: ["admin"],
@@ -132,61 +132,61 @@ const navigationItems: NavItem[] = [
   },
   // Seller specific items
   {
-    title: "Categories",
+    title: "Danh mục",
     href: "/seller/categories",
     icon: Tag,
     roles: ["seller"],
   },
   {
-    title: "Products",
+    title: "Sản phẩm",
     href: "/seller/products",
     icon: Package,
     roles: ["seller"],
   },
   {
-    title: "Orders",
+    title: "Đơn hàng",
     href: "/seller/orders",
     icon: ShoppingCart,
     roles: ["seller"],
   },
   {
-    title: "Revenue",
+    title: "Doanh thu",
     href: "/seller/revenue",
     icon: BarChart3,
     roles: ["seller"],
   },
   {
-    title: "Reviews",
+    title: "Đánh giá",
     href: "/seller/reviews",
     icon: Star,
     roles: ["seller"],
   },
   {
-    title: "Vouchers",
+    title: "Voucher",
     href: "/seller/vouchers",
     icon: Gift,
     roles: ["seller"],
   },
   {
-    title: "Chat",
+    title: "Trò chuyện",
     href: "/seller/chat",
     icon: MessageCircle,
     roles: ["seller"],
   },
+  // {
+  //   title: "Thông báo",
+  //   href: "/seller/notifications",
+  //   icon: Bell,
+  //   roles: ["seller"],
+  // },
   {
-    title: "Notifications",
-    href: "/seller/notifications",
-    icon: Bell,
-    roles: ["seller"],
-  },
-  {
-    title: "Wallet",
+    title: "Ví tiền",
     href: "/seller/wallet",
     icon: Wallet,
     roles: ["seller"],
   },
   {
-    title: "Profile",
+    title: "Hồ sơ",
     href: "/seller/profile",
     icon: Users,
     roles: ["seller"],
@@ -205,21 +205,21 @@ export default function Sidebar({
   // Update Sellers menu item with pending stores count and Drivers with pending drivers count
   const navItemsWithBadge = navigationItems.map((item) => {
     if (
-      item.title === "Users" &&
+      item.title === "Người dùng" &&
       item.roles.includes("admin") &&
       item.children
     ) {
       return {
         ...item,
         children: item.children.map((child) => {
-          if (child.title === "Sellers") {
+          if (child.title === "Người bán") {
             return { ...child, badge: pendingStoresCount };
           }
           return child;
         }),
       };
     }
-    if (item.title === "Drivers" && item.roles.includes("admin")) {
+    if (item.title === "Tài xế" && item.roles.includes("admin")) {
       return { ...item, badge: pendingDriversCount };
     }
     return item;
@@ -310,7 +310,7 @@ export default function Sidebar({
           {/* Footer */}
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              © 2024 QTI Food
+              © 2025 QTI Food
             </div>
           </div>
         </div>

@@ -306,7 +306,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Stats Cards */}
-        {stats && (
+        {/* {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
             <Card className="p-4">
               <div className="flex items-center justify-between">
@@ -384,18 +384,9 @@ export default function OrdersPage() {
               </div>
             </Card>
 
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Doanh Thu</p>
-                  <p className="text-xl font-bold text-green-600">
-                    {formatPrice(stats.totalRevenue).replace("₫", "")}k
-                  </p>
-                </div>
-              </div>
-            </Card>
+            
           </div>
-        )}
+        )} */}
 
         {/* Filters */}
         <OrderFilters
